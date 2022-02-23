@@ -1,0 +1,21 @@
+<launch>
+	<node name="takktile" 
+	pkg="takktile_ros" 
+	type="takktile_node.py" />
+	
+	<node name="accel" 
+	pkg="imu_files" 
+	type="accel_pub.py" />
+
+	<node pkg="lump_scripts" 
+	name="collect_data" 
+	type="collect_data.py" /> 
+
+	<!-- <node pkg="imu_files" 
+	name="real_time" 
+	type="real_time.py" 
+	output = "screen"/> -->
+
+</launch>
+
+
