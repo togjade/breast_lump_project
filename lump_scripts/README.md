@@ -8,29 +8,16 @@ git commit "description"
 
 ######################################
 
-### (working) lump_collect.py 
-	-> combines the topic and checks the changes in the pressure deriv sum to detect the spikes
+### lump_record.py -> records the data when squeezed and then detects the release. Not good way to do, bacause of delay and reduced sampling rate due to subscription. 
 
-### (working) lump_record.py 
-	-> records the data when squeezed and then detects the release 
+### process_trial -> to convert all bag files to csv and pllot the content of specific one or all
 
-### (in process)  process_trial 
-	-> to convert all bag files to csv and pllot the content of specific one or all
+### lump_with_press_2_csv.py -> listener to P, data to panda dataframe and saves to csv, automated naming and change the directory in the script. Work for many trials. 
 
-### (in process)  lump_write_2_csv.py 
-	-> listener to P+A, data to panda dataframe and saves to csv, but autometed naming for csv was not done yet
+### lump_with_accel_2_csv -> listener to A, data to panda dataframe and saves to csv, automated naming and change the directory in the script. Work for one trial. 
 
-### (in process)  lump_with_accel_2_csv.py 
-	-> listener to P+A, data to panda dataframe and saves to csv, automated naming and change the directory in the script, but the parallel file saving is not done yet. Works for 1 trial. time_k is a variable for the sampling duration
-
-### (working)  lump_with_press_2_csv.py 
-	-> listener to P, data to panda dataframe and saves to csv, automated naming and change the directory in the script. Work for many trials. 
-
-### (in process)  lump_accel_2_csv_back.py 
-	-> works for 1 trial, 
-
-### (working)  plot..py 
-	-> all work fine, change dir inside the code, lump_press_2_csv.py work good for many trials (sampling only P data)"
+### plot..py 
+	-> all work fine, change dir inside the code, plots for accel, pressure seaprately, data for both. Asks for input number to display the data (counting from the end).
 
 ######################################
 
