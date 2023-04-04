@@ -4,10 +4,10 @@
 path : '/raid/togzhan_syrymova/lump_project/data/'
 #Dataset generation
 window_len : 800         # length of input sequence
-stride_len : 80         # stride length
+stride_len : 160         # stride length
 
 # Training
-num_epochs : 5000         # number of epochs
+num_epochs : 500         # number of epochs
 batch_size : 512        # batch size
 learning_rate : 0.0001   # optimizer learning_rate
 channels_in: 1          # number of channels
