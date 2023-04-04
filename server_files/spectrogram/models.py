@@ -146,6 +146,53 @@ class ConvLayerNet3(torch.nn.Module):
         y_pred = (self.linear2(h_relu))#
         
         return y_pred
+
+class ConvLayerNet4(torch.nn.Module):
+    def __init__(self,  batch_size, device, channels_in, D_in, H):
+        super(ConvLayerNet4, self).__init__()
+        #(self,  channels_in, channels_out, D_in, H, D_out, device, drop=0.0, kernel_size=1, stride=1
+        self.device = device
+        self.channels_out = 1
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.D_in = D_in
+        self.drop = drop
+        self.convs = nn.Conv1d(15, 15, kernel_size=self.kernel_size, stride=self.stride)
+        self.convs = nn.Conv1d(15, self.channels_out, kernel_size=self.kernel_size, stride=self.stride)  
+        
+        W_out = ((self.D_in - self.kernel_size)//self.stride + 1)*self.channels_out
+        W_out = ((W_out - self.kernel_size)//self.stride + 1)*15*self.channels_out
+        W_out = np.int64(W_out) 
+        H3 = H//2
+        self.linear1_1 = torch.nn.Linear(W_out, H)
+        self.linear1_2 = torch.nn.Linear(H, H3)
+        self.linear1_3 = torch.nn.Linear(H3, 32)
+        self.linear2 = torch.nn.Linear(32, 1)
+        
+        self.relu = torch.nn.ReLU()
+        self.drop1   = torch.nn.Dropout(p=self.drop)
+        self.sigmoid = torch.nn.Sigmoid()
+        self.softmax = torch.nn.Softmax(dim=1)
+
+    def forward(self, x):
+        ii = 0
+        h_relu = torch.FloatTensor([]).to(self.device)
+        for layers in self.convs:
+            x_data = layers(torch.unsqueeze(x[:, ii, :], 1))
+            x_data = self.relu(x_data)
+            b, h, w = x_data.size()
+            x_data = x_data.view(b,-1)
+            h_relu = torch.cat([h_relu, x_data], axis = 1)
+            ii = ii+1
+        h_relu = self.drop1(self.linear1_1(h_relu))#.clamp(min=0)#.clamp(min=0)
+        h_relu = self.relu(h_relu)
+        h_relu = self.drop1(self.linear1_2(h_relu))#.clamp(min=0)#.clamp(min=0)
+        h_relu = self.relu(h_relu)
+        h_relu = self.drop1(self.linear1_3(h_relu))#.clamp(min=0)#.clamp(min=0)
+        h_relu = self.relu(h_relu)
+        y_pred = (self.linear2(h_relu))#
+        
+        return y_pred    
     
 class ConvLayerNet(torch.nn.Module):
 

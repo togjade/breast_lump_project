@@ -58,8 +58,10 @@ def extract_slices(x, window_len, stride_len):
 ################################################################
 def to_tensor(x, y):
 #     x, y = shuffle(x,y)
-    x = torch.FloatTensor(x.astype('float64'))
-    y = torch.FloatTensor(y.astype('float64'))
+    if torch.is_tensor(x) == False:
+        x = torch.FloatTensor(x.astype('float64'))
+    if torch.is_tensor(y) == False:
+        y = torch.FloatTensor(y.astype('float64'))
     return x, y
 ################################################################
 def compute_spectogram(x):
@@ -78,7 +80,7 @@ def read_data(window_len, stride_len, path, idx, var):
     print(csv_files_dev)
     # train data
     df_train_ = pd.read_csv(csv_files_train[0], sep = ',', header = None)
-    df_train_ = pd.DataFrame(df_train_.values[1:,:])
+#     df_train_ = pd.DataFrame(df_train_.values[1:,:])
     # test data
     df_test1 = pd.read_csv(csv_files_test[0], sep = ',', header = None)
     df_test2 = pd.read_csv(csv_files_test[1], sep = ',', header = None)
@@ -86,10 +88,11 @@ def read_data(window_len, stride_len, path, idx, var):
     df_test_ = df_test_.transpose()
     # dev data
     df_dev_ = pd.read_csv(csv_files_dev[0], sep = ',', header = None)
-    df_dev_ = pd.DataFrame(df_dev_.values[1:,:])
+#     df_dev_ = pd.DataFrame(df_dev_.values[1:,:])
     ################################################################
     # Get labels 
-    if var =='*raw*':
+#     if var =='*raw*':
+    if df_train_.values[1,-1].astype('float64') > 1:
         train_y = np.floor(pd.DataFrame((df_train_.values[:,-1].astype('float64')))/10)
         dev_y = np.floor(pd.DataFrame((df_dev_.values[:,-1].astype('float64')))/10)
     else:
@@ -97,7 +100,7 @@ def read_data(window_len, stride_len, path, idx, var):
         dev_y = pd.DataFrame((df_dev_.values[:,-1].astype('float64')))
         
     # Create test labels
-    test_y = pd.concat([ pd.DataFrame([0 for i in range(np.shape(df_test1)[1])]), pd.DataFrame([1 for i in range(np.shape(df_test2)[1])])], axis=0)
+    test_y = pd.concat([ pd.DataFrame([0 for i in range(np.shape(df_test1)[1])]), pd.DataFrame([1 for i in range(np.shape(df_test2)[1])])], axis= 0)
     test_y = test_y.reset_index(drop=True)
     ################################################################
     # get data
@@ -199,6 +202,7 @@ def test_model(model_path, device, test_x, test_y, dev_acc_max):
             acc    = accuracy_score(test_y, output.cpu())
             print("Test Accuracy: {:.3f}".format(acc))
             print(model)
+            
 ################ 
 ####        ####
 ################
