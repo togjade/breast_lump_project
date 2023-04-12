@@ -1,3 +1,4 @@
+
 <launch>
 	<node name="takktile" 
 	pkg="takktile_ros" 
@@ -12,11 +13,4 @@
 	name="lump_collect_data" 
 	type="lump_collect_data.py" /> 
 
-	<!-- <node pkg="imu_files" 
-	name="real_time" 
-	type="real_time.py" 
-	output = "screen"/> -->
-
 </launch>
-
-

@@ -1,22 +1,12 @@
+
 <launch>
 	<node name="takktile" 
 	pkg="takktile_ros" 
 	type="takktile_node.py" />
-	
-	<!-- <node name="accel" 
-	pkg="imu_files" 
-	type="accel_pub.py" /> -->
 	
 	<node pkg="imu_files" 
 	name="lump_with_press_2_csv" 
 	type="lump_with_press_2_csv.py"
 	output = "screen" /> 
 
-	<!-- <node pkg="imu_files" 
-	name="real_time" 
-	type="real_time.py" 
-	output = "screen"/> -->
-
 </launch>
-
-
