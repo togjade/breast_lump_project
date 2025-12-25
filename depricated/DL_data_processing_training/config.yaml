@@ -1,0 +1,23 @@
+###################
+# MODEL TRAINING
+###################
+path : '/raid/togzhan_syrymova/lump_project/data/'
+#Dataset generation
+window_len : 800         # length of input sequence
+stride_len : 160         # stride length
+
+# Training
+num_epochs : 500         # number of epochs
+batch_size : 512        # batch size
+learning_rate : 0.0001   # optimizer learning_rate
+channels_in: 1          # number of channels
+D_out: 1                 # output layer size
+hidden_size : 256         # hidden layer size 
+kernel_size : 15          # kernel size
+stride : 3              # stride size
+dropout: 0.3 # dropout
+valid_period : 1         # validation period
+valid_size: 100
+
+# SAVE TRAINED MODEL
+model_name : 'Model'
