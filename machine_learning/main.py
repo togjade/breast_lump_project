@@ -119,6 +119,9 @@ ALL_RESULT_COLUMNS = [
     "model",
     "task",
     "cv_type",
+    "eval_set",
+    "sensor_config",
+    "num_seconds",
     "fold",
     "doctor_trials",
     # Primary (single-task) metrics or combined view
@@ -172,10 +175,21 @@ def read_results_csv(path: Path) -> Optional[pd.DataFrame]:
         df = pd.read_csv(path, engine="python", on_bad_lines="skip")
     except Exception:
         df = None
-    if df is None or len(df.columns) != len(ALL_RESULT_COLUMNS):
-        # Coerce with provided names if columns are missing/misaligned.
-        df = pd.read_csv(path, engine="python", on_bad_lines="skip", header=None, names=ALL_RESULT_COLUMNS)
-    return df.reindex(columns=ALL_RESULT_COLUMNS)
+    if df is None:
+        return None
+
+    if set(df.columns).issubset(set(ALL_RESULT_COLUMNS)):
+        # Add any missing columns from older files without treating the header row as data.
+        for col in ALL_RESULT_COLUMNS:
+            if col not in df.columns:
+                df[col] = "val" if col == "eval_set" else None
+        df["eval_set"] = df.get("eval_set", "val").fillna("val")
+        return df[ALL_RESULT_COLUMNS]
+
+    # Fallback: coerce with provided names if columns are misaligned.
+    df = pd.read_csv(path, engine="python", on_bad_lines="skip", header=None, names=ALL_RESULT_COLUMNS)
+    df["eval_set"] = df.get("eval_set", "val").fillna("val")
+    return df[ALL_RESULT_COLUMNS]
 
 
 class EarlyStopping:
@@ -659,6 +673,7 @@ def run_cv(
     model_name: str,
     task: TaskSpec,
     cv_type: Literal["group", "plain"],
+    sensor_config: str,
     n_splits: int,
     batch_size: int,
     results_dir: Path,
@@ -668,6 +683,8 @@ def run_cv(
     sensor_indices: Optional[List[int]] = None,
     skip_completed: Optional[set] = None,
     results_path: Optional[Path] = None,
+    external_test_df: Optional[pd.DataFrame] = None,
+    external_eval_name: str = "doctors_test",
 ):
     results = []
     df_use = df.copy()
@@ -681,7 +698,7 @@ def run_cv(
 
     fold_iter = splitter.split(df_use, y_strat, groups)
     for fold, (train_idx, val_idx) in enumerate(tqdm(fold_iter, total=n_splits, desc=f"{task.name}-{model_name}-{cv_type}-folds")):
-        key = (task.name, model_name, cv_type, fold, doctor_trials)
+        key = (task.name, model_name, cv_type, sensor_config, num_seconds, fold, doctor_trials)
         if skip_completed and key in skip_completed:
             continue
         train_df = df_use.iloc[train_idx].reset_index(drop=True)
@@ -698,11 +715,20 @@ def run_cv(
         model, _ = fit(model, train_loader, val_loader, task.task_type, task.label_names, fold_desc=f"fold {fold+1}/{n_splits} | ")
         metrics, cms = evaluate(model, val_loader, task.task_type, task.label_names)
 
-        fold_result = {"model": model_name, "task": task.name, "cv_type": cv_type, "fold": fold, "doctor_trials": doctor_trials}
+        fold_result = {
+            "model": model_name,
+            "task": task.name,
+            "cv_type": cv_type,
+            "eval_set": "val",
+            "sensor_config": sensor_config,
+            "num_seconds": num_seconds,
+            "fold": fold,
+            "doctor_trials": doctor_trials,
+        }
         if task.task_type == "multitask":
             for key in ["Lump", "Size", "Position"]:
                 fold_result.update({f"{key}_f1": metrics[key]["f1"], f"{key}_precision": metrics[key]["precision"], f"{key}_recall": metrics[key]["recall"], f"{key}_acc": metrics[key]["accuracy"]})
-                cm_path = results_dir / f"cm_{task.name}_{cv_type}_{model_name}_fold{fold}_{key}.png"
+                cm_path = results_dir / f"cm_{task.name}_{cv_type}_{sensor_config}_{num_seconds}s_{model_name}_fold{fold}_{key}_val.png"
                 save_confusion_matrix(task.label_names[key], cm_path, cm_matrix=cms[key])
             fold_result["combined_f1"] = metrics["combined_f1"]
             fold_result["combined_precision"] = float(np.mean([metrics[k]["precision"] for k in ["Lump", "Size", "Position"]]))
@@ -715,7 +741,7 @@ def run_cv(
             fold_result["accuracy"] = fold_result["combined_accuracy"]
         else:
             fold_result.update({"f1": metrics["f1"], "precision": metrics["precision"], "recall": metrics["recall"], "accuracy": metrics["accuracy"]})
-            cm_path = results_dir / f"cm_{task.name}_{cv_type}_{model_name}_fold{fold}.png"
+            cm_path = results_dir / f"cm_{task.name}_{cv_type}_{sensor_config}_{num_seconds}s_{model_name}_fold{fold}_val.png"
             save_confusion_matrix(task.label_names[task.label_cols[0]], cm_path, cm_matrix=cms)
             fold_result["combined_f1"] = fold_result["f1"]
             fold_result["combined_precision"] = fold_result["precision"]
@@ -731,10 +757,64 @@ def run_cv(
                 header=not results_path.exists(),
                 index=False,
             )
+
+        # Optional external test on doctors data (only when not already augmenting with doctors trials)
+        if external_test_df is not None and doctor_trials == 0:
+            test_loader = build_dataloader(external_test_df, task.label_cols, batch_size=batch_size, sensor_indices=sensor_indices, num_seconds=num_seconds)
+            test_metrics, test_cms = evaluate(model, test_loader, task.task_type, task.label_names)
+            test_result = {
+                "model": model_name,
+                "task": task.name,
+                "cv_type": cv_type,
+                "eval_set": external_eval_name,
+                "sensor_config": sensor_config,
+                "num_seconds": num_seconds,
+                "fold": fold,
+                "doctor_trials": doctor_trials,
+            }
+            if task.task_type == "multitask":
+                for key in ["Lump", "Size", "Position"]:
+                    test_result.update({f"{key}_f1": test_metrics[key]["f1"], f"{key}_precision": test_metrics[key]["precision"], f"{key}_recall": test_metrics[key]["recall"], f"{key}_acc": test_metrics[key]["accuracy"]})
+                    cm_path = results_dir / f"cm_{task.name}_{cv_type}_{sensor_config}_{num_seconds}s_{model_name}_fold{fold}_{key}_{external_eval_name}.png"
+                    save_confusion_matrix(task.label_names[key], cm_path, cm_matrix=test_cms[key])
+                test_result["combined_f1"] = test_metrics["combined_f1"]
+                test_result["combined_precision"] = float(np.mean([test_metrics[k]["precision"] for k in ["Lump", "Size", "Position"]]))
+                test_result["combined_recall"] = float(np.mean([test_metrics[k]["recall"] for k in ["Lump", "Size", "Position"]]))
+                test_result["combined_accuracy"] = float(np.mean([test_metrics[k]["accuracy"] for k in ["Lump", "Size", "Position"]]))
+                test_result["f1"] = test_result["combined_f1"]
+                test_result["precision"] = test_result["combined_precision"]
+                test_result["recall"] = test_result["combined_recall"]
+                test_result["accuracy"] = test_result["combined_accuracy"]
+            else:
+                test_result.update({"f1": test_metrics["f1"], "precision": test_metrics["precision"], "recall": test_metrics["recall"], "accuracy": test_metrics["accuracy"]})
+                cm_path = results_dir / f"cm_{task.name}_{cv_type}_{sensor_config}_{num_seconds}s_{model_name}_fold{fold}_{external_eval_name}.png"
+                save_confusion_matrix(task.label_names[task.label_cols[0]], cm_path, cm_matrix=test_cms)
+                test_result["combined_f1"] = test_result["f1"]
+                test_result["combined_precision"] = test_result["precision"]
+                test_result["combined_recall"] = test_result["recall"]
+                test_result["combined_accuracy"] = test_result["accuracy"]
+            test_row = normalize_row(test_result)
+            results.append(test_row)
+            if results_path is not None:
+                results_path.parent.mkdir(parents=True, exist_ok=True)
+                pd.DataFrame([test_row])[ALL_RESULT_COLUMNS].to_csv(
+                    results_path,
+                    mode="a",
+                    header=not results_path.exists(),
+                    index=False,
+                )
     return results
 
 
-def run_benchmark(df: pd.DataFrame, doctors_df: pd.DataFrame, results_dir: Path, batch_size: int = 32, n_splits: int = 3, num_seconds: int = 7, sensor_indices: Optional[List[int]] = None):
+def run_benchmark(
+    df: pd.DataFrame,
+    doctors_df: pd.DataFrame,
+    results_dir: Path,
+    sensor_configs: Dict[str, List[int]],
+    durations: List[int],
+    batch_size: int = 32,
+    n_splits: int = 5,
+):
     binary_task = TaskSpec(
         name="binary_lump",
         label_cols=["Lump"],
@@ -750,31 +830,49 @@ def run_benchmark(df: pd.DataFrame, doctors_df: pd.DataFrame, results_dir: Path,
         for _, r in prev.iterrows():
             f = safe_int(r.get("fold"))
             d = safe_int(r.get("doctor_trials"))
-            if f is None or d is None:
+            sec = safe_int(r.get("num_seconds"))
+            sensor_conf = r.get("sensor_config") if pd.notna(r.get("sensor_config")) else "all"
+            eval_set = r.get("eval_set") if pd.notna(r.get("eval_set")) else "val"
+            if eval_set != "val":
                 continue
-            skip_completed.add((r.get("task"), r.get("model"), r.get("cv_type"), f, d))
+            if f is None or d is None or sec is None:
+                continue
+            skip_completed.add((r.get("task"), r.get("model"), r.get("cv_type"), sensor_conf, sec, f, d))
 
     all_results = []
     for model_name in models:
-        fold_results = run_cv(
-            df,
-            model_name,
-            binary_task,
-            cv_type="group",
-            n_splits=n_splits,
-            batch_size=batch_size,
-            results_dir=results_dir,
-            doctors_df=doctors_df,
-            num_seconds=num_seconds,
-            sensor_indices=sensor_indices,
-            skip_completed=skip_completed,
-            results_path=results_path,
-        )
-        all_results.extend(fold_results)
+        for sensor_conf, sensor_indices in sensor_configs.items():
+            for duration in durations:
+                for cv_type in ["group", "plain"]:
+                    fold_results = run_cv(
+                        df,
+                        model_name,
+                        binary_task,
+                        cv_type=cv_type,
+                        sensor_config=sensor_conf,
+                        n_splits=n_splits,
+                        batch_size=batch_size,
+                        results_dir=results_dir,
+                        doctors_df=doctors_df,
+                        num_seconds=duration,
+                        sensor_indices=sensor_indices,
+                        skip_completed=skip_completed,
+                        results_path=results_path,
+                        external_test_df=doctors_df,
+                    )
+                    all_results.extend(fold_results)
     return all_results
 
 
-def run_full_experiments(df: pd.DataFrame, doctors_df: pd.DataFrame, results_dir: Path, batch_size: int = 32, n_splits: int = 5, num_seconds: int = 7, sensor_indices: Optional[List[int]] = None):
+def run_full_experiments(
+    df: pd.DataFrame,
+    doctors_df: pd.DataFrame,
+    results_dir: Path,
+    sensor_configs: Dict[str, List[int]],
+    durations: List[int],
+    batch_size: int = 32,
+    n_splits: int = 5,
+):
     tasks = [
         TaskSpec(name="lump_binary", label_cols=["Lump"], task_type="binary", num_classes={"Lump": 2}, label_names={"Lump": ["No Lump", "Lump"]}),
         TaskSpec(name="size_multiclass", label_cols=["Size"], task_type="multiclass", num_classes={"Size": 4}, label_names={"Size": ["Small", "Medium", "Big", "No Lump"]}),
@@ -790,45 +888,56 @@ def run_full_experiments(df: pd.DataFrame, doctors_df: pd.DataFrame, results_dir
         for _, r in prev.iterrows():
             f = safe_int(r.get("fold"))
             d = safe_int(r.get("doctor_trials"))
-            if f is None or d is None:
+            sec = safe_int(r.get("num_seconds"))
+            sensor_conf = r.get("sensor_config") if pd.notna(r.get("sensor_config")) else "all"
+            eval_set = r.get("eval_set") if pd.notna(r.get("eval_set")) else "val"
+            if eval_set != "val":
                 continue
-            skip_completed.add((r.get("task"), r.get("model"), r.get("cv_type"), f, d))
+            if f is None or d is None or sec is None:
+                continue
+            skip_completed.add((r.get("task"), r.get("model"), r.get("cv_type"), sensor_conf, sec, f, d))
 
     all_results = []
     for task in tasks:
-        for cv_type in ["group", "plain"]:
-            fold_results = run_cv(
-                df,
-                model_name,
-                task,
-                cv_type=cv_type,
-                n_splits=n_splits,
-                batch_size=batch_size,
-                results_dir=results_dir,
-                doctors_df=doctors_df,
-                num_seconds=num_seconds,
-                sensor_indices=sensor_indices,
-                skip_completed=skip_completed,
-                results_path=results_path,
-            )
-            all_results.extend(fold_results)
-            for add_trials in range(1, 16):
-                fold_results = run_cv(
-                    df,
-                    model_name,
-                    task,
-                    cv_type=cv_type,
-                    n_splits=n_splits,
-                    batch_size=batch_size,
-                    results_dir=results_dir,
-                    doctors_df=doctors_df,
-                    doctor_trials=add_trials,
-                    num_seconds=num_seconds,
-                    sensor_indices=sensor_indices,
-                    skip_completed=skip_completed,
-                    results_path=results_path,
-                )
-                all_results.extend(fold_results)
+        for sensor_conf, sensor_indices in sensor_configs.items():
+            for duration in durations:
+                for cv_type in ["group", "plain"]:
+                    fold_results = run_cv(
+                        df,
+                        model_name,
+                        task,
+                        cv_type=cv_type,
+                        sensor_config=sensor_conf,
+                        n_splits=n_splits,
+                        batch_size=batch_size,
+                        results_dir=results_dir,
+                        doctors_df=doctors_df,
+                        num_seconds=duration,
+                        sensor_indices=sensor_indices,
+                        skip_completed=skip_completed,
+                        results_path=results_path,
+                        external_test_df=doctors_df,
+                    )
+                    all_results.extend(fold_results)
+                    for add_trials in range(1, 16):
+                        fold_results = run_cv(
+                            df,
+                            model_name,
+                            task,
+                            cv_type=cv_type,
+                            sensor_config=sensor_conf,
+                            n_splits=n_splits,
+                            batch_size=batch_size,
+                            results_dir=results_dir,
+                            doctors_df=doctors_df,
+                            doctor_trials=add_trials,
+                            num_seconds=duration,
+                            sensor_indices=sensor_indices,
+                            skip_completed=skip_completed,
+                            results_path=results_path,
+                            external_test_df=None,
+                        )
+                        all_results.extend(fold_results)
     return all_results
 
 
@@ -848,23 +957,40 @@ def main(run_heavy: bool = False) -> None:
     df = prepare_dataframe(str(data_path))
     doctors_df = prepare_dataframe(str(doctors_path))
     results_dir = Path("results")
-    sensor_indices = list(range(15))
+    sensor_configs = {
+        "tips": [0, 3, 6, 9, 12],
+        "tips_middle": [0, 1, 3, 4, 6, 7, 9, 10, 12, 13],
+        "all": list(range(15)),
+    }
+    durations = [1, 2, 3, 4, 5, 6, 7]
 
-    benchmark_results = run_benchmark(df, doctors_df, results_dir=results_dir / "benchmark")
+    benchmark_results = run_benchmark(
+        df,
+        doctors_df,
+        results_dir=results_dir / "benchmark",
+        sensor_configs=sensor_configs,
+        durations=durations,
+    )
     benchmark_csv = results_dir / "benchmark" / "benchmark_results.csv"
     existing = read_results_csv(benchmark_csv)
     combined = pd.concat([existing, pd.DataFrame([normalize_row(r) for r in benchmark_results])], ignore_index=True) if existing is not None else pd.DataFrame([normalize_row(r) for r in benchmark_results])
-    combined = combined.drop_duplicates(subset=["task", "model", "cv_type", "fold", "doctor_trials"], keep="last")
+    combined = combined.drop_duplicates(subset=["task", "model", "cv_type", "eval_set", "sensor_config", "num_seconds", "fold", "doctor_trials"], keep="last")
     combined = combined[ALL_RESULT_COLUMNS]
     benchmark_csv.parent.mkdir(parents=True, exist_ok=True)
     combined.to_csv(benchmark_csv, index=False)
 
     if run_heavy:
-        full_results = run_full_experiments(df, doctors_df, results_dir=results_dir / "inceptiontime")
+        full_results = run_full_experiments(
+            df,
+            doctors_df,
+            results_dir=results_dir / "inceptiontime",
+            sensor_configs=sensor_configs,
+            durations=durations,
+        )
         full_csv = results_dir / "inceptiontime" / "all_results.csv"
         existing = read_results_csv(full_csv)
         combined = pd.concat([existing, pd.DataFrame([normalize_row(r) for r in full_results])], ignore_index=True) if existing is not None else pd.DataFrame([normalize_row(r) for r in full_results])
-        combined = combined.drop_duplicates(subset=["task", "model", "cv_type", "fold", "doctor_trials"], keep="last")
+        combined = combined.drop_duplicates(subset=["task", "model", "cv_type", "eval_set", "sensor_config", "num_seconds", "fold", "doctor_trials"], keep="last")
         combined = combined[ALL_RESULT_COLUMNS]
         full_csv.parent.mkdir(parents=True, exist_ok=True)
         combined.to_csv(full_csv, index=False)
@@ -873,7 +999,7 @@ def main(run_heavy: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    main(run_heavy=True)
+    main(run_heavy=False)
 
 
 
