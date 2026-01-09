@@ -948,7 +948,7 @@ def save_results(results: List[Dict], out_path: Path) -> pd.DataFrame:
     return df
 
 
-def main(run_heavy: bool = False) -> None:
+def main(run_heavy: bool = False, run_benchmark: bool = False) -> None:
     data_path = Path("togzhan_data_labeled.pkl")
     doctors_path = Path("doctors_data_labeled.pkl")
     if not data_path.exists() or not doctors_path.exists():
@@ -964,20 +964,23 @@ def main(run_heavy: bool = False) -> None:
     }
     durations = [1, 2, 3, 4, 5, 6, 7]
 
-    benchmark_results = run_benchmark(
-        df,
-        doctors_df,
-        results_dir=results_dir / "benchmark",
-        sensor_configs=sensor_configs,
-        durations=durations,
-    )
-    benchmark_csv = results_dir / "benchmark" / "benchmark_results.csv"
-    existing = read_results_csv(benchmark_csv)
-    combined = pd.concat([existing, pd.DataFrame([normalize_row(r) for r in benchmark_results])], ignore_index=True) if existing is not None else pd.DataFrame([normalize_row(r) for r in benchmark_results])
-    combined = combined.drop_duplicates(subset=["task", "model", "cv_type", "eval_set", "sensor_config", "num_seconds", "fold", "doctor_trials"], keep="last")
-    combined = combined[ALL_RESULT_COLUMNS]
-    benchmark_csv.parent.mkdir(parents=True, exist_ok=True)
-    combined.to_csv(benchmark_csv, index=False)
+    if run_benchmark:
+        benchmark_results = run_benchmark(
+            df,
+            doctors_df,
+            results_dir=results_dir / "benchmark",
+            sensor_configs=sensor_configs,
+            durations=durations,
+        )
+        benchmark_csv = results_dir / "benchmark" / "benchmark_results.csv"
+        existing = read_results_csv(benchmark_csv)
+        combined = pd.concat([existing, pd.DataFrame([normalize_row(r) for r in benchmark_results])], ignore_index=True) if existing is not None else pd.DataFrame([normalize_row(r) for r in benchmark_results])
+        combined = combined.drop_duplicates(subset=["task", "model", "cv_type", "eval_set", "sensor_config", "num_seconds", "fold", "doctor_trials"], keep="last")
+        combined = combined[ALL_RESULT_COLUMNS]
+        benchmark_csv.parent.mkdir(parents=True, exist_ok=True)
+        combined.to_csv(benchmark_csv, index=False)
+    else:
+        print("Benchmark runs skipped. Set run_benchmark=True in main() to execute benchmarks.")
 
     if run_heavy:
         full_results = run_full_experiments(
@@ -999,7 +1002,7 @@ def main(run_heavy: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    main(run_heavy=False)
+    main(run_heavy=True, run_benchmark=False)
 
 
 
