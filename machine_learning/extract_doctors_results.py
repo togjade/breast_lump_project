@@ -15,7 +15,7 @@ def main():
         print(f"Error: {results_csv} not found.")
         return
 
-    df = pd.read_csv(results_csv, on_bad_lines="skip")
+    df = pd.read_csv(results_csv)
     filtered = df[
         (df["eval_set"] == "doctors_test") &
         (df["doctor_trials"] == 0) &

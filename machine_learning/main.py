@@ -1045,7 +1045,7 @@ def main(run_heavy: bool = False, run_benchmark: bool = False) -> None:
         "tips_middle": [0, 1, 3, 4, 6, 7, 9, 10, 12, 13],
         "tips": [0, 3, 6, 9, 12],
     }
-    durations = [1, 2, 3, 4, 5, 6, 7]
+    durations = [7, 6, 5, 4, 3, 2, 1]
 
     if run_benchmark:
         benchmark_results = run_benchmark(
