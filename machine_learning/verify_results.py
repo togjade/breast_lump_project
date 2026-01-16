@@ -64,9 +64,10 @@ def check_ordering(df: pd.DataFrame, eval_set: str = "val", doctor_trials: int =
     task_order = {t: i for i, t in enumerate(EXPECTED_TASKS)}
     sensor_order = {s: i for i, s in enumerate(EXPECTED_SENSOR_CONFIGS)}
 
-    # Check ordering within each cv_type and duration group
+    # Check ordering within each cv_type group
     for cv_type in EXPECTED_CV_TYPES:
-        for duration in EXPECTED_DURATIONS:
+        # Check num_seconds in descending order (7 -> 1)
+        for duration in sorted(EXPECTED_DURATIONS, reverse=True):
             group = filtered[(filtered["cv_type"] == cv_type)
                              & (filtered["num_seconds"] == duration)]
             if group.empty:
