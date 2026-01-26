@@ -780,8 +780,9 @@ def run_cv(
             for key in ["Lump", "Size", "Position"]:
                 fold_result.update({f"{key}_f1": metrics[key]["f1"], f"{key}_precision": metrics[key]["precision"],
                                    f"{key}_recall": metrics[key]["recall"], f"{key}_acc": metrics[key]["accuracy"]})
-                cm_path = results_dir / \
+                cm_path = results_dir / "confusion_matrices" / \
                     f"cm_{task.name}_{cv_type}_{sensor_config}_{num_seconds}s_{model_name}_fold{fold}_{key}_val.png"
+                cm_path.parent.mkdir(parents=True, exist_ok=True)
                 save_confusion_matrix(
                     task.label_names[key], cm_path, cm_matrix=cms[key])
             fold_result["combined_f1"] = metrics["combined_f1"]
@@ -799,8 +800,9 @@ def run_cv(
         else:
             fold_result.update({"f1": metrics["f1"], "precision": metrics["precision"],
                                "recall": metrics["recall"], "accuracy": metrics["accuracy"]})
-            cm_path = results_dir / \
+            cm_path = results_dir / "confusion_matrices" / \
                 f"cm_{task.name}_{cv_type}_{sensor_config}_{num_seconds}s_{model_name}_fold{fold}_val.png"
+            cm_path.parent.mkdir(parents=True, exist_ok=True)
             save_confusion_matrix(
                 task.label_names[task.label_cols[0]], cm_path, cm_matrix=cms)
             fold_result["combined_f1"] = fold_result["f1"]
@@ -838,7 +840,7 @@ def run_cv(
                 for key in ["Lump", "Size", "Position"]:
                     test_result.update({f"{key}_f1": test_metrics[key]["f1"], f"{key}_precision": test_metrics[key]["precision"],
                                        f"{key}_recall": test_metrics[key]["recall"], f"{key}_acc": test_metrics[key]["accuracy"]})
-                    cm_path = results_dir / \
+                    cm_path = results_dir / "confusion_matrices" / \
                         f"cm_{task.name}_{cv_type}_{sensor_config}_{num_seconds}s_{model_name}_fold{fold}_{key}_{external_eval_name}.png"
                     save_confusion_matrix(
                         task.label_names[key], cm_path, cm_matrix=test_cms[key])
@@ -856,7 +858,7 @@ def run_cv(
             else:
                 test_result.update({"f1": test_metrics["f1"], "precision": test_metrics["precision"],
                                    "recall": test_metrics["recall"], "accuracy": test_metrics["accuracy"]})
-                cm_path = results_dir / \
+                cm_path = results_dir / "confusion_matrices" / \
                     f"cm_{task.name}_{cv_type}_{sensor_config}_{num_seconds}s_{model_name}_fold{fold}_{external_eval_name}.png"
                 save_confusion_matrix(
                     task.label_names[task.label_cols[0]], cm_path, cm_matrix=test_cms)
