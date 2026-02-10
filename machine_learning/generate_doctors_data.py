@@ -10,7 +10,7 @@ import os
 import pandas as pd
 
 # Define the folder path
-folder_path = 'doctor1'
+folder_path = 'doctor_data'
 
 # Define the relevant columns
 relevant_columns = [3, 4, 5, 9, 10, 11, 15, 16, 17, 21, 22, 23, 27, 28, 29]
