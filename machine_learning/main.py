@@ -23,8 +23,8 @@ from tqdm import tqdm
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# number of DataLoader workers; 0 falls back to main-process loading
-NUM_WORKERS = min(4, os.cpu_count() or 0)
+# Optimal: 2 workers with pin_memory + AMP (benchmarked)
+NUM_WORKERS = 2
 
 
 def set_seed(seed: int = 1337) -> None:
@@ -92,11 +92,10 @@ def build_dataloader(df: pd.DataFrame, label_cols: List[str], batch_size: int, s
     targets = {col: torch.tensor(
         df[col].values, dtype=torch.long) for col in label_cols}
     dataset = SensorDataset(features, targets)
-    use_mp = NUM_WORKERS > 0
     return DataLoader(
         dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False,
         num_workers=NUM_WORKERS, pin_memory=torch.cuda.is_available(),
-        persistent_workers=use_mp,
+        persistent_workers=NUM_WORKERS > 0,
     )
 
 
@@ -565,8 +564,7 @@ def train_one_epoch(model: nn.Module, dataloader: DataLoader, optimizer: torch.o
     total_loss = 0.0
     n_seen = 0
     use_amp = scaler is not None
-    pbar = tqdm(dataloader, desc=desc, leave=False)
-    for batch in pbar:
+    for batch in dataloader:
         optimizer.zero_grad(set_to_none=True)
         with torch.amp.autocast("cuda", enabled=use_amp):
             if task_type == "multitask":
@@ -598,7 +596,6 @@ def train_one_epoch(model: nn.Module, dataloader: DataLoader, optimizer: torch.o
             optimizer.step()
         total_loss += loss.item() * inputs.size(0)
         n_seen += inputs.size(0)
-        pbar.set_postfix(loss=f"{total_loss / n_seen:.4f}")
     return total_loss / len(dataloader.dataset)
 
 
@@ -606,7 +603,7 @@ def predict_logits(model: nn.Module, dataloader: DataLoader, task_type: Literal[
     model.eval()
     logits_list, targets_list = [], []
     with torch.no_grad():
-        for batch in tqdm(dataloader, desc=desc, leave=False):
+        for batch in dataloader:
             if task_type == "multitask":
                 inputs, target_tuple = batch
                 inputs = inputs.to(DEVICE, non_blocking=True)
@@ -675,7 +672,7 @@ def evaluate(model: nn.Module, dataloader: DataLoader, task_type: Literal["binar
     return metrics, cm
 
 
-def fit(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader, task_type: Literal["binary", "multiclass", "multitask"], label_names: Dict[str, List[str]], lr: float = 1e-3, weight_decay: float = 1e-4, max_epochs: int = 100, patience: int = 15, fold_desc: str = ""):
+def fit(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader, task_type: Literal["binary", "multiclass", "multitask"], label_names: Dict[str, List[str]], lr: float = 1e-3, weight_decay: float = 1e-4, max_epochs: int = 500, patience: int = 15, fold_desc: str = ""):
     optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = get_loss_functions(task_type)
@@ -905,7 +902,7 @@ def run_benchmark(
     results_dir: Path,
     sensor_configs: Dict[str, List[int]],
     durations: List[int],
-    batch_size: int = 128,
+    batch_size: int = 512,
     n_splits: int = 5,
     validate_doctors: bool = False,
 ):
@@ -968,7 +965,7 @@ def run_full_experiments(
     results_dir: Path,
     sensor_configs: Dict[str, List[int]],
     durations: List[int],
-    batch_size: int = 128,
+    batch_size: int = 512,
     n_splits: int = 5,
     finetune_doctors: bool = False,
     validate_doctors: bool = False,
