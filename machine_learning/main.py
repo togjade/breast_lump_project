@@ -44,12 +44,6 @@ def set_seed(seed: int = 1337) -> None:
 
 set_seed(1337)
 
-if torch.cuda.is_available():
-    print(
-        f"CUDA available: {torch.cuda.get_device_name(0)} ({torch.cuda.device_count()} GPU)")
-else:
-    print("CUDA not available, using CPU.")
-
 
 def prepare_dataframe(path: str) -> pd.DataFrame:
     df = pd.read_pickle(path).reset_index(drop=True)
@@ -1129,6 +1123,10 @@ def main(
 
 
 if __name__ == "__main__":
+    if torch.cuda.is_available():
+        print(f"CUDA available: {torch.cuda.get_device_name(0)} ({torch.cuda.device_count()} GPU)")
+    else:
+        print("CUDA not available, using CPU.")
     main(
         run_benchmark_flag=False,
         finetune_doctors=True,
