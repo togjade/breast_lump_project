@@ -23,6 +23,10 @@ from tqdm import tqdm
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+# number of DataLoader workers; 0 falls back to main-process loading
+NUM_WORKERS = min(4, os.cpu_count() or 0)
+
+
 def set_seed(seed: int = 1337) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -31,12 +35,11 @@ def set_seed(seed: int = 1337) -> None:
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
 
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    # fast mode: let cuDNN auto-tune convolution algorithms
+    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.benchmark = True
 
     os.environ["PYTHONHASHSEED"] = str(seed)
-    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":16:8"
-    torch.use_deterministic_algorithms(True, warn_only=True)
 
 
 set_seed(1337)
@@ -95,7 +98,12 @@ def build_dataloader(df: pd.DataFrame, label_cols: List[str], batch_size: int, s
     targets = {col: torch.tensor(
         df[col].values, dtype=torch.long) for col in label_cols}
     dataset = SensorDataset(features, targets)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False)
+    use_mp = NUM_WORKERS > 0
+    return DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False,
+        num_workers=NUM_WORKERS, pin_memory=torch.cuda.is_available(),
+        persistent_workers=use_mp,
+    )
 
 
 def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray, average: str = "macro") -> Dict[str, float]:
@@ -558,34 +566,45 @@ def get_loss_functions(task_type: Literal["binary", "multiclass", "multitask"], 
     raise ValueError(f"Unsupported task_type {task_type}")
 
 
-def train_one_epoch(model: nn.Module, dataloader: DataLoader, optimizer: torch.optim.Optimizer, criterion, task_type: Literal["binary", "multiclass", "multitask"], desc: str = "train"):
+def train_one_epoch(model: nn.Module, dataloader: DataLoader, optimizer: torch.optim.Optimizer, criterion, task_type: Literal["binary", "multiclass", "multitask"], desc: str = "train", scaler: torch.amp.GradScaler | None = None):
     model.train()
     total_loss = 0.0
-    for batch in tqdm(dataloader, desc=desc, leave=False):
-        optimizer.zero_grad()
-        if task_type == "multitask":
-            inputs, (lump, size, pos) = batch
-            inputs = inputs.to(DEVICE)
-            lump = lump.float().to(DEVICE)
-            size = size.to(DEVICE)
-            pos = pos.to(DEVICE)
-            outputs = model(inputs)
-            loss = criterion["Lump"](outputs["Lump"].squeeze(), lump)
-            loss += criterion["Size"](outputs["Size"], size)
-            loss += criterion["Position"](outputs["Position"], pos)
-        else:
-            inputs, targets = batch
-            inputs = inputs.to(DEVICE)
-            targets = targets.to(DEVICE)
-            outputs = model(inputs)
-            if task_type == "binary":
-                targets = targets.float()
-                loss = criterion(outputs.squeeze(), targets)
+    n_seen = 0
+    use_amp = scaler is not None
+    pbar = tqdm(dataloader, desc=desc, leave=False)
+    for batch in pbar:
+        optimizer.zero_grad(set_to_none=True)
+        with torch.amp.autocast("cuda", enabled=use_amp):
+            if task_type == "multitask":
+                inputs, (lump, size, pos) = batch
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                lump = lump.float().to(DEVICE, non_blocking=True)
+                size = size.to(DEVICE, non_blocking=True)
+                pos = pos.to(DEVICE, non_blocking=True)
+                outputs = model(inputs)
+                loss = criterion["Lump"](outputs["Lump"].squeeze(), lump)
+                loss += criterion["Size"](outputs["Size"], size)
+                loss += criterion["Position"](outputs["Position"], pos)
             else:
-                loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
+                inputs, targets = batch
+                inputs = inputs.to(DEVICE, non_blocking=True)
+                targets = targets.to(DEVICE, non_blocking=True)
+                outputs = model(inputs)
+                if task_type == "binary":
+                    targets = targets.float()
+                    loss = criterion(outputs.squeeze(), targets)
+                else:
+                    loss = criterion(outputs, targets)
+        if use_amp:
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            optimizer.step()
         total_loss += loss.item() * inputs.size(0)
+        n_seen += inputs.size(0)
+        pbar.set_postfix(loss=f"{total_loss / n_seen:.4f}")
     return total_loss / len(dataloader.dataset)
 
 
@@ -596,7 +615,7 @@ def predict_logits(model: nn.Module, dataloader: DataLoader, task_type: Literal[
         for batch in tqdm(dataloader, desc=desc, leave=False):
             if task_type == "multitask":
                 inputs, target_tuple = batch
-                inputs = inputs.to(DEVICE)
+                inputs = inputs.to(DEVICE, non_blocking=True)
                 outputs = model(inputs)
                 logits_list.append({
                     "Lump": outputs["Lump"].cpu(),
@@ -610,7 +629,7 @@ def predict_logits(model: nn.Module, dataloader: DataLoader, task_type: Literal[
                 })
             else:
                 inputs, targets = batch
-                inputs = inputs.to(DEVICE)
+                inputs = inputs.to(DEVICE, non_blocking=True)
                 outputs = model(inputs)
                 logits_list.append(outputs.cpu())
                 targets_list.append(targets)
@@ -666,15 +685,17 @@ def fit(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader, task
     optimizer = torch.optim.Adam(
         model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = get_loss_functions(task_type)
+    scaler = torch.amp.GradScaler("cuda", enabled=torch.cuda.is_available())
     early = EarlyStopping(patience=patience)
     best_state = None
     best_score = -math.inf
     history = []
 
-    for epoch in range(max_epochs):
-        epoch_desc = f"{fold_desc}epoch {epoch+1}/{max_epochs}" if fold_desc else f"epoch {epoch+1}/{max_epochs}"
+    epoch_pbar = tqdm(range(max_epochs), desc=f"{fold_desc}epochs", leave=False)
+    for epoch in epoch_pbar:
         train_loss = train_one_epoch(
-            model, train_loader, optimizer, criterion, task_type, desc=f"train | {epoch_desc}")
+            model, train_loader, optimizer, criterion, task_type,
+            desc=f"{fold_desc}train e{epoch+1}", scaler=scaler)
         val_metrics, _ = evaluate(model, val_loader, task_type, label_names)
         score = val_metrics["combined_f1"] if task_type == "multitask" else val_metrics["f1"]
         history.append(
@@ -684,6 +705,9 @@ def fit(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader, task
             best_score = score
             best_state = {k: v.cpu().clone()
                           for k, v in model.state_dict().items()}
+        epoch_pbar.set_postfix(
+            loss=f"{train_loss:.4f}", f1=f"{score:.4f}",
+            best=f"{best_score:.4f}", patience=f"{early.counter}/{early.patience}")
         if stop:
             break
     if best_state is not None:
@@ -740,8 +764,10 @@ def run_cv(
     y_strat = get_stratify_target(df_use, task)
     splitter = stratified_splitter(cv_type, n_splits=n_splits)
 
+    fold_desc_base = (f"{task.name} | {model_name} | {cv_type} | "
+                       f"{sensor_config} | {num_seconds}s | dr={doctor_trials}")
     fold_iter = splitter.split(df_use, y_strat, groups)
-    for fold, (train_idx, val_idx) in enumerate(tqdm(fold_iter, total=n_splits, desc=f"{task.name}-{model_name}-{cv_type}-folds")):
+    for fold, (train_idx, val_idx) in enumerate(tqdm(fold_iter, total=n_splits, desc=fold_desc_base)):
         key = (task.name, model_name, cv_type, sensor_config,
                num_seconds, fold, doctor_trials)
         if skip_completed and key in skip_completed:
@@ -762,7 +788,7 @@ def run_cv(
                 sensor_indices or list(range(15))), num_classes=n_classes)
         model.to(DEVICE)
         model, _ = fit(model, train_loader, val_loader, task.task_type,
-                       task.label_names, fold_desc=f"fold {fold+1}/{n_splits} | ")
+                       task.label_names, fold_desc=f"f{fold+1}/{n_splits} | ")
         metrics, cms = evaluate(
             model, val_loader, task.task_type, task.label_names)
 
@@ -885,7 +911,7 @@ def run_benchmark(
     results_dir: Path,
     sensor_configs: Dict[str, List[int]],
     durations: List[int],
-    batch_size: int = 32,
+    batch_size: int = 128,
     n_splits: int = 5,
     validate_doctors: bool = False,
 ):
@@ -948,7 +974,7 @@ def run_full_experiments(
     results_dir: Path,
     sensor_configs: Dict[str, List[int]],
     durations: List[int],
-    batch_size: int = 32,
+    batch_size: int = 128,
     n_splits: int = 5,
     finetune_doctors: bool = False,
     validate_doctors: bool = False,
