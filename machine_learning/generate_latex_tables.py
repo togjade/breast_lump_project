@@ -1,8 +1,8 @@
 """
 Generate LaTeX tables from all_results.csv for research paper.
 Creates 3 tables:
-- Phalanges (tips)
-- Phalanges and Distal (tips_middle)
+- Distal Phalanges (distal)
+- Distal and Intermediate Phalanges (distal_intermediate)
 - All (all)
 
 Each table shows F1-scores (%) for:
@@ -193,8 +193,8 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     sensor_configs = [
-        ("tips", "Phalanges"),
-        ("tips_middle", "Phalanges and Distal"),
+        ("distal", "Distal Phalanges"),
+        ("distal_intermediate", "Distal and Intermediate Phalanges"),
         ("all", "All Sensors"),
     ]
 

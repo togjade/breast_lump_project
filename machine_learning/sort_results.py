@@ -1,7 +1,7 @@
 """
 Sort all_results.csv according to specified order:
 1) task: lump_binary, size_multiclass, position_multiclass, multitask_all
-2) sensor_config: all, tips_middle, tips
+2) sensor_config: all, distal_intermediate, distal
 3) num_seconds: 7 to 1 (descending)
 4) fold: 0 to 4
 5) doctor_trials: 0 to 15
@@ -13,7 +13,7 @@ import pandas as pd
 
 TASK_ORDER = ["lump_binary", "size_multiclass",
               "position_multiclass", "multitask_all"]
-SENSOR_ORDER = ["all", "tips_middle", "tips"]
+SENSOR_ORDER = ["all", "distal_intermediate", "distal"]
 CV_ORDER = ["group", "plain"]
 EVAL_ORDER = ["val", "doctors_test"]
 

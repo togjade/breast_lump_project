@@ -887,6 +887,7 @@ def run_benchmark(
     durations: List[int],
     batch_size: int = 32,
     n_splits: int = 5,
+    validate_doctors: bool = False,
 ):
     binary_task = TaskSpec(
         name="binary_lump",
@@ -935,7 +936,7 @@ def run_benchmark(
                         sensor_indices=sensor_indices,
                         skip_completed=skip_completed,
                         results_path=results_path,
-                        external_test_df=doctors_df,
+                        external_test_df=doctors_df if validate_doctors else None,
                     )
                     all_results.extend(fold_results)
     return all_results
@@ -949,6 +950,8 @@ def run_full_experiments(
     durations: List[int],
     batch_size: int = 32,
     n_splits: int = 5,
+    finetune_doctors: bool = False,
+    validate_doctors: bool = False,
 ):
     tasks = [
         TaskSpec(name="lump_binary", label_cols=["Lump"], task_type="binary", num_classes={
@@ -1000,28 +1003,29 @@ def run_full_experiments(
                         sensor_indices=sensor_indices,
                         skip_completed=skip_completed,
                         results_path=results_path,
-                        external_test_df=doctors_df,
+                        external_test_df=doctors_df if validate_doctors else None,
                     )
                     all_results.extend(fold_results)
-                    for add_trials in range(1, 16):
-                        fold_results = run_cv(
-                            df,
-                            model_name,
-                            task,
-                            cv_type=cv_type,
-                            sensor_config=sensor_conf,
-                            n_splits=n_splits,
-                            batch_size=batch_size,
-                            results_dir=results_dir,
-                            doctors_df=doctors_df,
-                            doctor_trials=add_trials,
-                            num_seconds=duration,
-                            sensor_indices=sensor_indices,
-                            skip_completed=skip_completed,
-                            results_path=results_path,
-                            external_test_df=None,
-                        )
-                        all_results.extend(fold_results)
+                    if finetune_doctors:
+                        for add_trials in range(1, 16):
+                            fold_results = run_cv(
+                                df,
+                                model_name,
+                                task,
+                                cv_type=cv_type,
+                                sensor_config=sensor_conf,
+                                n_splits=n_splits,
+                                batch_size=batch_size,
+                                results_dir=results_dir,
+                                doctors_df=doctors_df,
+                                doctor_trials=add_trials,
+                                num_seconds=duration,
+                                sensor_indices=sensor_indices,
+                                skip_completed=skip_completed,
+                                results_path=results_path,
+                                external_test_df=None,
+                            )
+                            all_results.extend(fold_results)
     return all_results
 
 
@@ -1032,7 +1036,13 @@ def save_results(results: List[Dict], out_path: Path) -> pd.DataFrame:
     return df
 
 
-def main(run_heavy: bool = False, run_benchmark: bool = False) -> None:
+def main(
+    run_benchmark_flag: bool = False,
+    finetune_doctors: bool = False,
+    validate_doctors: bool = False,
+    extra_durations: bool = False,
+    extra_sensor_configs: bool = False,
+) -> None:
     data_path = Path("togzhan_data_labeled.pkl")
     doctors_path = Path("doctors_data_labeled.pkl")
     if not data_path.exists() or not doctors_path.exists():
@@ -1042,20 +1052,22 @@ def main(run_heavy: bool = False, run_benchmark: bool = False) -> None:
     df = prepare_dataframe(str(data_path))
     doctors_df = prepare_dataframe(str(doctors_path))
     results_dir = Path("results")
-    sensor_configs = {
+    sensor_configs: Dict[str, List[int]] = {
         "all": list(range(15)),
-        "tips_middle": [0, 1, 3, 4, 6, 7, 9, 10, 12, 13],
-        "tips": [0, 3, 6, 9, 12],
     }
-    durations = [7, 6, 5, 4, 3, 2, 1]
+    if extra_sensor_configs:
+        sensor_configs["distal_intermediate"] = [0, 1, 3, 4, 6, 7, 9, 10, 12, 13]
+        sensor_configs["distal"] = [0, 3, 6, 9, 12]
+    durations = [7, 6, 5, 4, 3, 2, 1] if extra_durations else [7]
 
-    if run_benchmark:
+    if run_benchmark_flag:
         benchmark_results = run_benchmark(
             df,
             doctors_df,
             results_dir=results_dir / "benchmark",
             sensor_configs=sensor_configs,
             durations=durations,
+            validate_doctors=validate_doctors,
         )
         benchmark_csv = results_dir / "benchmark" / "benchmark_results.csv"
         existing = read_results_csv(benchmark_csv)
@@ -1067,28 +1079,34 @@ def main(run_heavy: bool = False, run_benchmark: bool = False) -> None:
         benchmark_csv.parent.mkdir(parents=True, exist_ok=True)
         combined.to_csv(benchmark_csv, index=False)
     else:
-        print("Benchmark runs skipped. Set run_benchmark=True in main() to execute benchmarks.")
+        print("Benchmark runs skipped. Set run_benchmark_flag=True to execute benchmarks.")
 
-    if run_heavy:
-        full_results = run_full_experiments(
-            df,
-            doctors_df,
-            results_dir=results_dir / "inceptiontime",
-            sensor_configs=sensor_configs,
-            durations=durations,
-        )
-        full_csv = results_dir / "inceptiontime" / "all_results.csv"
-        existing = read_results_csv(full_csv)
-        combined = pd.concat([existing, pd.DataFrame([normalize_row(r) for r in full_results])],
-                             ignore_index=True) if existing is not None else pd.DataFrame([normalize_row(r) for r in full_results])
-        combined = combined.drop_duplicates(
-            subset=["task", "model", "cv_type", "eval_set", "sensor_config", "num_seconds", "fold", "doctor_trials"], keep="last")
-        combined = combined[ALL_RESULT_COLUMNS]
-        full_csv.parent.mkdir(parents=True, exist_ok=True)
-        combined.to_csv(full_csv, index=False)
-    else:
-        print("Heavy experiments skipped. Set run_heavy=True in main() to execute full protocol.")
+    # Full InceptionTime experiments always run
+    full_results = run_full_experiments(
+        df,
+        doctors_df,
+        results_dir=results_dir / "inceptiontime",
+        sensor_configs=sensor_configs,
+        durations=durations,
+        finetune_doctors=finetune_doctors,
+        validate_doctors=validate_doctors,
+    )
+    full_csv = results_dir / "inceptiontime" / "all_results.csv"
+    existing = read_results_csv(full_csv)
+    combined = pd.concat([existing, pd.DataFrame([normalize_row(r) for r in full_results])],
+                         ignore_index=True) if existing is not None else pd.DataFrame([normalize_row(r) for r in full_results])
+    combined = combined.drop_duplicates(
+        subset=["task", "model", "cv_type", "eval_set", "sensor_config", "num_seconds", "fold", "doctor_trials"], keep="last")
+    combined = combined[ALL_RESULT_COLUMNS]
+    full_csv.parent.mkdir(parents=True, exist_ok=True)
+    combined.to_csv(full_csv, index=False)
 
 
 if __name__ == "__main__":
-    main(run_heavy=True, run_benchmark=False)
+    main(
+        run_benchmark_flag=False,
+        finetune_doctors=True,
+        validate_doctors=True,
+        extra_durations=False,
+        extra_sensor_configs=False,
+    )

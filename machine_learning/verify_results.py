@@ -2,7 +2,7 @@
 Verify integrity of all_results.csv.
 Checks for completeness and correct ordering of:
 1) Tasks: lump_binary, size_multiclass, position_multiclass
-2) Sensor configs: all, tips_middle, tips
+2) Sensor configs: all, distal_intermediate, distal
 3) Folds: 0 to 4
 """
 
@@ -11,7 +11,7 @@ import pandas as pd
 
 
 EXPECTED_TASKS = ["lump_binary", "size_multiclass", "position_multiclass"]
-EXPECTED_SENSOR_CONFIGS = ["all", "tips_middle", "tips"]
+EXPECTED_SENSOR_CONFIGS = ["all", "distal_intermediate", "distal"]
 EXPECTED_FOLDS = [0, 1, 2, 3, 4]
 EXPECTED_CV_TYPES = ["group", "plain"]
 EXPECTED_DURATIONS = [1, 2, 3, 4, 5, 6, 7]
