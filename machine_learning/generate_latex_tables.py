@@ -17,9 +17,15 @@ import numpy as np
 
 
 def load_data(csv_path: Path) -> pd.DataFrame:
-    """Load and prepare data from CSV."""
+    """Load and prepare data from CSV (num_seconds=7 only)."""
     df = pd.read_csv(csv_path)
-    # Filter for num_seconds == 7 and eval_set == 'val'
+    df = df[df["num_seconds"] == 7]
+    return df
+
+
+def load_data_val_only(csv_path: Path) -> pd.DataFrame:
+    """Load data filtered to val eval_set only (for fine-tuning tables)."""
+    df = pd.read_csv(csv_path)
     df = df[(df["num_seconds"] == 7) & (df["eval_set"] == "val")]
     return df
 
@@ -87,6 +93,102 @@ def find_best_indices(values: list) -> list:
         return []
     max_val = max(v for _, v in valid)
     return [i for i, v in valid if v == max_val]
+
+
+def generate_initial_table(df: pd.DataFrame) -> str:
+    """Generate the initial overview table comparing single-task vs multitask
+    for val and doctors_test, with group and plain CV (doctor_trials=0, sensor_config=all)."""
+
+    def _mean_f1(task: str, cv_type: str, eval_set: str, col: str = "f1") -> float:
+        mask = (
+            (df["task"] == task) &
+            (df["cv_type"] == cv_type) &
+            (df["eval_set"] == eval_set) &
+            (df["sensor_config"] == "all") &
+            (df["doctor_trials"] == 0)
+        )
+        subset = df[mask]
+        if subset.empty or col not in subset.columns:
+            return np.nan
+        return subset[col].mean() * 100
+
+    def _fmt(val: float) -> str:
+        if pd.isna(val):
+            return "-"
+        return f"{val:.1f}"
+
+    # --- Collect values: (eval_set, cv_type) ---
+    configs = [
+        ("val", "group"),
+        ("val", "plain"),
+        ("doctors_test", "group"),
+        ("doctors_test", "plain"),
+    ]
+
+    data = {}
+    for eval_set, cv_type in configs:
+        key = (eval_set, cv_type)
+        data[key] = {
+            "st_lump": _mean_f1("lump_binary", cv_type, eval_set),
+            "st_size": _mean_f1("size_multiclass", cv_type, eval_set),
+            "st_pos": _mean_f1("position_multiclass", cv_type, eval_set),
+            "mt_lump": _mean_f1("multitask_all", cv_type, eval_set, "Lump_f1"),
+            "mt_size": _mean_f1("multitask_all", cv_type, eval_set, "Size_f1"),
+            "mt_pos": _mean_f1("multitask_all", cv_type, eval_set, "Position_f1"),
+        }
+
+    def _vals(key):
+        d = data[key]
+        return (d["st_lump"], d["st_size"], d["st_pos"],
+                d["mt_lump"], d["mt_size"], d["mt_pos"])
+
+    vg = _vals(("val", "group"))
+    vp = _vals(("val", "plain"))
+    dg = _vals(("doctors_test", "group"))
+    dp = _vals(("doctors_test", "plain"))
+
+    def _mr(vals):
+        """Format 6 values as multirow cells."""
+        return " & ".join(f"\\multirow{{3}}{{*}}{{{_fmt(v)}}}" for v in vals)
+
+    table = f"""\\begin{{table}}[!b]
+\\centering
+\\caption{{Lump Detection accuracy for single-task/multitask model with stratified group k-fold and stratified k-fold cross-validation. The table presents the averaged F1-score~(\\%) across five folds.}}
+    \\resizebox{{1\\linewidth}}{{!}}{{
+        \\begin{{tabular}}{{c c c c c| c c c}}
+            \\toprule
+            \\multirow{{3}}{{*}}{{Dataset}} & \\multirow{{3}}{{*}}{{{{Data Split }}}} &\\multicolumn{{3}}{{c}}{{Single-task}}& \\multicolumn{{3}}{{c}}{{{{Multitask}}}} \\\\ \\cmidrule(lr){{3-5}} \\cmidrule(lr){{6-8}} 
+            &   &    {{Lump}}  & {{Size}} & {{Location}} & {{Lump }}     & {{Size}} & {{Location}} \\\\ 
+            %------
+            &   &     Presence & & & Presence   & &  \\\\ \\midrule
+            %------
+            & {{{{Stratified}}}}  & {_mr(vg)}\\\\ 
+            %------
+            &  {{{{Group}}}} & & & & & & \\\\
+            %------
+            Validation & {{{{k-fold}}}} & & & & & & \\\\
+            %------
+            Set & \\multirow{{3}}{{*}}{{{{{{Stratified}}}}}} & {_mr(vp)} \\\\
+            & & & & & & & \\\\
+            & {{{{k-fold}}}} & & & & & & \\\\ \\midrule
+            %------------------------------
+            & Stratified & {_mr(dg)}\\\\ 
+            %------
+            & Group & & & & & & \\\\  
+            %------
+            Clinician & {{{{k-fold}}}} & & & & & & \\\\
+            %------
+            Dataset& \\multirow{{3}}{{*}}{{{{{{Stratified}}}}}} & {_mr(dp)} \\\\
+            %------
+            & & & & & & & \\\\
+            & {{{{k-fold}}}} & & & & & & \\\\
+            \\bottomrule
+        \\end{{tabular}}
+    }}
+\\label{{tab:initial}}
+\\end{{table}}"""
+
+    return table
 
 
 def generate_table(df: pd.DataFrame, sensor_config: str, sensor_name: str) -> str:
@@ -186,11 +288,19 @@ def main():
         return
 
     print(f"Loading {csv_path}...")
-    df = load_data(csv_path)
-    print(f"Filtered to {len(df)} rows (num_seconds=7, eval_set=val)")
+    df_all = load_data(csv_path)
+    df_val = df_all[df_all["eval_set"] == "val"]
+    print(f"Total rows (7s): {len(df_all)}, val-only: {len(df_val)}")
 
     output_dir = Path("results/inceptiontime")
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- Initial overview table ---
+    print("Generating initial overview table...")
+    initial_table = generate_initial_table(df_all)
+    print("  Done.")
+
+    # --- Fine-tuning tables per sensor config ---
 
     sensor_configs = [
         ("distal", "Distal Phalanges"),
@@ -198,10 +308,10 @@ def main():
         ("all", "All Sensors"),
     ]
 
-    all_tables = []
+    all_tables = [initial_table]
     for sensor_config, sensor_name in sensor_configs:
         print(f"Generating table for {sensor_name} ({sensor_config})...")
-        table = generate_table(df, sensor_config, sensor_name)
+        table = generate_table(df_val, sensor_config, sensor_name)
         all_tables.append(table)
         print(f"  Done.")
 
