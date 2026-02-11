@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Literal, Optional, Tuple
 
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend, avoids tkinter threading errors
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -1128,6 +1130,6 @@ if __name__ == "__main__":
         run_benchmark_flag=False,
         finetune_doctors=True,
         validate_doctors=True,
-        extra_durations=False,
-        extra_sensor_configs=False,
+        extra_durations=True,
+        extra_sensor_configs=True,
     )
