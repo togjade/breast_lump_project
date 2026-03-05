@@ -1,0 +1,371 @@
+\documentclass[a4paper, onecolumn]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{picinpar}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{flushend}
+\usepackage[latin1]{inputenc}
+\usepackage{colortbl}
+\usepackage{soul}
+\usepackage{multirow}
+\usepackage{pifont}
+\usepackage{diagbox}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage{color}
+\usepackage{alltt}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumerate}
+\usepackage{siunitx}
+\usepackage{breakurl}
+\usepackage{epstopdf}
+\usepackage{pbox}
+\usepackage{scalerel}
+\usepackage{tikz}
+\usepackage{wasysym}  
+\usepackage{subcaption}
+\usepackage{booktabs}  % For professional-looking tables
+\usepackage{threeparttable}  % For table notes
+\usepackage{multirow} 
+\usepackage{subcaption}     % for subfigures
+
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\usetikzlibrary{svg.path}
+\definecolor{orcidlogocol}{HTML}{A6CE39}
+\tikzset{
+	orcidlogo/.pic={
+		\fill[orcidlogocol] svg{M256,128c0,70.7-57.3,128-128,128C57.3,256,0,198.7,0,128C0,57.3,57.3,0,128,0C198.7,0,256,57.3,256,128z};
+		\fill[white] svg{M86.3,186.2H70.9V79.1h15.4v48.4V186.2z}
+		svg{M108.9,79.1h41.6c39.6,0,57,28.3,57,53.6c0,27.5-21.5,53.6-56.8,53.6h-41.8V79.1z M124.3,172.4h24.5c34.9,0,42.9-26.5,42.9-39.7c0-21.5-13.7-39.7-43.7-39.7h-23.7V172.4z}
+		svg{M88.7,56.8c0,5.5-4.5,10.1-10.1,10.1c-5.6,0-10.1-4.6-10.1-10.1c0-5.6,4.5-10.1,10.1-10.1C84.2,46.7,88.7,51.3,88.7,56.8z};
+	}
+}
+\newcommand\red[1]{{\textcolor{white!30!red}{#1}}}
+\newcommand\blue[1]{{\textcolor{white!30!blue}{#1}}}
+\newcommand\orcidicon[1]{\href{https://orcid.org/#1}{\mbox{\scalerel*{
+				\begin{tikzpicture}[yscale=-1,transform shape]
+				\pic{orcidlogo};
+				\end{tikzpicture}
+			}{|}}}}
+\newcommand\encircle[1]{%
+  \tikz[baseline=(X.base)] 
+    \node (X) [draw, shape=circle, inner sep=0] {\strut #1};}
+
+\newcommand{\slips}{{^{\rm s\!}s}}
+\newcommand{\bslips}{{^{\rm s\!}\boldsymbol{s}}}
+\newcommand{\bs}{\boldsymbol{s}}
+\newcommand{\bp}{\boldsymbol{p}}\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bv}{\boldsymbol{v}}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\DeclareMathOperator{\sign}{sign}
+\DeclareMathOperator{\NCC}{NCC}	
+\definecolor{orcidlogocol}{HTML}{A6CE39}
+\tikzset{
+	orcidlogo/.pic={
+		\fill[orcidlogocol] svg{M256,128c0,70.7-57.3,128-128,128C57.3,256,0,198.7,0,128C0,57.3,57.3,0,128,0C198.7,0,256,57.3,256,128z};
+		\fill[white] svg{M86.3,186.2H70.9V79.1h15.4v48.4V186.2z}
+		svg{M108.9,79.1h41.6c39.6,0,57,28.3,57,53.6c0,27.5-21.5,53.6-56.8,53.6h-41.8V79.1z M124.3,172.4h24.5c34.9,0,42.9-26.5,42.9-39.7c0-21.5-13.7-39.7-43.7-39.7h-23.7V172.4z}
+		svg{M88.7,56.8c0,5.5-4.5,10.1-10.1,10.1c-5.6,0-10.1-4.6-10.1-10.1c0-5.6,4.5-10.1,10.1-10.1C84.2,46.7,88.7,51.3,88.7,56.8z};
+	}
+}
+\begin{document}
+\author{
+	\vskip 1em
+        Togzhan Syrymova$^{\orcidicon{0000-0003-1032-5880}}$, Amir Yelenov$^{\orcidicon{0000-0003-0674-5460}}$, Nazgul Abulkhanova$^{\orcidicon{0000-0003-3526-5159}}$, \\Huseyin Atakan Varol$^{\orcidicon{0000-0002-4042-425X}}$,~\IEEEmembership{Senior Member,~IEEE,} Juan Antonio Corrales Ram\'on$^{\orcidicon{0000-0002-9373-7954}}$, \\Zhanat Kappassov$^{\orcidicon{0000-0003-3262-3993}}$,~\IEEEmembership{Senior Member,~IEEE}}
+    \title{Breast Lump Detection and Localization with a Tactile Glove Using Deep Learning}
+\maketitle	
+\markboth{Reply letter}
+{}
+\definecolor{limegreen}{rgb}{0.2, 0.8, 0.2}
+\definecolor{forestgreen}{rgb}{0.13, 0.55, 0.13}
+\definecolor{greenhtml}{rgb}{0.0, 0.5, 0.0}
+
+
+Dear Editor,
+
+For this special issue, the manuscript was completely rewritten. Initially, we submitted this manuscript to IEEE Transactions on Medical Robotics and Bionics.
+
+Please find enclosed a description of the changes made to the paper  ID TMRB-01-25-OA-0069 that was rejected with resubmit option.
+
+Sincerely,
+
+Zhanat Kappassov on behalf of all authors
+
+
+\section*{Comments}
+\blue{
+\\
+Manuscript ID TMRB-01-25-OA-0069, entitled "Breast Lump Detection and Localization with a Tactile Glove Using Deep Learning" which you submitted to the IEEE Transactions on Medical Robotics and Bionics, has been reviewed.  The comments from reviewers are included at the bottom of this letter.
+\\
+In view of the criticisms of the reviewers found at the bottom of this letter, your manuscript has been denied publication in the IEEE Transactions on Medical Robotics and Bionics.
+You may consider resubmitting a revised version of your manuscript but, according to the T-MRB editorial policy, you should not do so before 6 months from today.
+\\
+Thank you for considering the IEEE Transactions on Medical Robotics and Bionics for the publication of your research. I hope the outcome of this specific submission will not discourage you from the submission of future manuscripts.
+\\
+Sincerely,
+Prof. Paolo Dario
+Editor-in-Chief, IEEE Transactions on Medical Robotics and Bionics}
+\section*{Reviewer 1}
+\blue{The manuscript presents an innovative approach to breast lump detection using a tactile glove integrated with deep learning. The topic is both timely and relevant, with potential clinical applications that could significantly improve early breast cancer detection. The proposed method, utilizing a fabric-based glove with pressure sensors and a deep learning framework, is well-conceived and has been evaluated with a reasonable experimental design.}
+%%%%%%%%%%%%%%%REV1%%%%%%%%%%%%%%%
+\blue{1. First and foremost, the reported accuracy metrics raise concerns regarding the generalizability of the model. The drop in performance when testing on new users suggests overfitting to the training data. The authors state that transfer learning improves generalizability, but it remains unclear how well the model would perform in a real clinical setting with a highly diverse user base. More robust validation, possibly including an independent test dataset or cross-validation with a larger participant group, is necessary to establish reliability.}
+
+We thank the Reviewer for the important remark regarding the generalizability of the model. We have made substantial changes to address this concern.
+
+First, we employed two different cross-validation approaches: stratified group k-fold cross-validation and stratified k-fold cross-validation, both with $K = 5$. In stratified group k-fold cross-validation, all samples from a given participant were assigned exclusively to either the training or the validation set within each fold, thereby preventing subject-level data leakage and providing a realistic estimate of performance on entirely unseen users. In contrast, stratified k-fold cross-validation preserved class proportions across folds while allowing samples from the same participant to appear in different folds, providing an upper-bound performance estimate under less restrictive conditions.
+
+Second, we benchmarked eight state-of-the-art deep learning architectures for time-series classification (InceptionTime, XceptionTime, XResNet1d34, mWDN, ResCNN, FCN, LSTM-FCN, and LSTM) on the binary lump detection task (see Table~\ref{tab:benchmarking}). InceptionTime achieved the highest F1-score under both stratified group k-fold CV (74.6\%) and stratified k-fold CV (92.5\%), and was therefore selected as the primary architecture for all subsequent experiments.
+
+Third, we evaluated the model on a completely independent clinician dataset that was never seen during training. As shown in Table~\ref{tab:initial}, the lump detection F1-score on unseen clinician data reached 67.4\% (group k-fold) and 66.0\% (plain k-fold) for single-task, and 67.7\% and 64.7\% for multitask, respectively. The comparable performance between both CV schemes on this external dataset suggests that both approaches captured meaningful task-related features rather than merely memorizing participant-specific patterns.
+
+Fourth, we introduced a fine-tuning protocol wherein a small number of clinician trials (1--15) were incrementally added to the training set. As shown in Table~\ref{tab:fine_tuning_all}, even a single added clinician trial allowed the model to recover performance comparable to the base model. With four added trials, the single-task lump detection F1-score under group k-fold CV improved from 73.2\% (base) to 76.1\%, demonstrating that minimal adaptation data can efficiently enhance generalization to new users.
+
+In Section III-C, we describe our new training protocol and fine-tuning process in detail.
+
+Table II from the old manuscript was divided into two tables: Table II (see Table~\ref{tab:initial}) and Table III (see Table~\ref{tab:fine_tuning_all}). 
+%------------ BENCHMARK -------------
+\begin{table}[tbh]
+    \caption{Performance of different DL methods for lump detection classification using pressure sensor data. mWDN - Multilevel Wavelet Decomposition Network, ResCNN - Resilient Convolutional Neural Networks, LSTM - Long short-term memory, FCN - Fully Convolutional Network}
+    \centering
+    \begin{tabular}{cccccccccccc}
+    \toprule
+    \diagbox{$Data Split$}{$Models$} & InceptionTime & XceptionTime & XResNet1d34 & mWDN  & ResCNN & FCN & LSTM-FCN & LSTM \\ 
+    \midrule
+    Stratified Group k-fold CV  & \textbf{74.6\%} & 73.8\% & 73.3\% & 73.1\% & 73.1\% & 74.1\% &  72.5\% &  74.1\%  \\ 
+    Stratified k-fold CV        & \textbf{92.5\%} & 91.9\% & 91.2\% & 90.3\% & 89.6\% & 89.5\% &  91.3\% &  90.7\%  \\ 
+    \bottomrule
+    \end{tabular}
+    \label{tab:benchmarking}
+\end{table}
+%------------ BENCHMARK -------------
+%------------ TABLE BASE MODEL -------------
+\begin{table}[!tbh]
+\centering
+\caption{Lump Detection accuracy for single-task/multitask model with stratified group k-fold and stratified k-fold cross-validation. The table presents the averaged F1-score~(\%) across five folds.}
+    \resizebox{.5\textwidth}{!}{
+        \begin{tabular}{c c c c c| c c c}
+            \toprule
+            \multirow{3}{*}{Dataset} & \multirow{3}{*}{{Data Split }} &\multicolumn{3}{c}{Single-task}& \multicolumn{3}{c}{{Multitask}} \\ \cmidrule(lr){3-5} \cmidrule(lr){6-8} 
+            &   &    {Lump}  & {Size} & {Location} & {Lump }     & {Size} & {Location} \\ 
+            %------
+            &   &     Presence & & & Presence   & &  \\ \midrule
+            %------
+            & {{Stratified}}  & \multirow{3}{*}{73.2} & \multirow{3}{*}{41.5} & \multirow{3}{*}{37.3} & \multirow{3}{*}{73.6} & \multirow{3}{*}{37.9} & \multirow{3}{*}{34.9}\\ 
+            %------
+            &  {{Group}} & & & & & & \\
+            %------
+            Validation & {{k-fold}} & & & & & & \\
+            %------
+            Set & \multirow{3}{*}{{{Stratified}}} & \multirow{3}{*}{90.5} & \multirow{3}{*}{76.2} & \multirow{3}{*}{70.2} & \multirow{3}{*}{91.4} & \multirow{3}{*}{74.6} & \multirow{3}{*}{66.8} \\
+            & & & & & & & \\
+            & {{k-fold}} & & & & & & \\ \midrule
+            %------------------------------
+            & Stratified & \multirow{3}{*}{67.4} & \multirow{3}{*}{16.9} & \multirow{3}{*}{13.1} & \multirow{3}{*}{67.7} & \multirow{3}{*}{13.9} & \multirow{3}{*}{14.2}\\ 
+            %------
+            & Group & & & & & & \\  
+            %------
+            Clinician & {{k-fold}} & & & & & & \\
+            %------
+            Dataset& \multirow{3}{*}{{{Stratified}}} & \multirow{3}{*}{66.0} & \multirow{3}{*}{12.3} & \multirow{3}{*}{15.7} & \multirow{3}{*}{64.7} & \multirow{3}{*}{12.0} & \multirow{3}{*}{16.4} \\
+            %------
+            & & & & & & & \\
+            & {{k-fold}} & & & & & & \\
+            \bottomrule
+        \end{tabular}
+    }
+\label{tab:initial}
+\end{table}
+
+%------------ TABLE BASE MODEL -------------
+%------------ TABLE FINE TUNING MODEL -------------
+\begin{table}[tbh]
+    \centering
+    \caption{Lump Detection F1-scores~(\%) for Single-task/Multitask Model with Stratified Group K-Fold Cross-Validation and Stratified K-Fold Cross-Validation Data Splits and Fine-Tuning (All Sensors).}
+    \resizebox{.9\textwidth}{!}{
+    \begin{tabular}{c c c c| c c c| c c c| c c c}
+        \toprule
+        \multirow{2}{*}{Added} & \multicolumn{6}{c}{Stratified Group K-Fold Cross-Validation} & \multicolumn{6}{c}{Stratified K-Fold Cross-Validation}
+        \\ \cmidrule(lr){3-5}  \cmidrule(lr){9-11}
+        Trials &\multicolumn{3}{c}{Single-task} &\multicolumn{3}{c}{Multitask} &\multicolumn{3}{c}{Single-task} &\multicolumn{3}{c}{Multitask}
+        \\  \cmidrule(lr){2-13} 
+        & {Lump Presence} & {Size} & {Location} & {Lump Presence} & {Size} & {Location} & {Lump Presence} & {Size} & {Location} & {Lump Presence} & {Size} & {Location}\\ 
+         \midrule
+            % 0 & 73.2 & \textbf{41.5} & 37.3 & 73.6 & 37.9 & 34.9 & 90.5 & 76.2 & 70.2 & 91.4 & 74.6 & 66.8 \\
+            1 & 71.9 & 38.8 & 35.6 & 72.2 & 36.8 & 32.1 & 90.0 & 74.0 & 67.6 & 90.1 & 69.6 & 63.3 \\
+            2 & 71.6 & 38.9 & 36.2 & 73.1 & 36.9 & 34.4 & 90.6 & 74.7 & 69.1 & 90.7 & 73.2 & 65.1 \\
+            3 & 73.1 & 37.1 & 35.6 & 72.8 & 37.6 & 35.1 & 90.7 & 76.8 & 70.2 & 91.3 & 73.5 & 67.5 \\
+            4 & \textbf{76.1} & 38.7 & 36.3 & 73.4 & \textbf{39.8} & 34.3 & 90.9 & 76.6 & 68.6 & \textbf{91.7} & 74.7 & 66.8 \\
+            5 & 72.9 & 38.6 & 35.8 & 73.1 & 39.3 & 33.8 & 91.5 & \textbf{77.0} & 69.2 & 91.2 & 73.4 & 66.7 \\
+            6 & 75.4 & 37.7 & 37.0 & 69.8 & 36.7 & 34.0 & 91.7 & 76.7 & 69.9 & 91.5 & \textbf{76.0} & \textbf{68.6} \\
+            7 & 73.5 & 38.9 & 36.2 & 72.7 & 36.9 & 34.1 & 91.2 & 75.7 & 69.9 & 91.5 & 74.6 & 67.4 \\
+            8 & 74.3 & 38.7 & \textbf{37.5} & 72.2 & 39.6 & 33.0 & 91.7 & 76.1 & 68.7 & 91.4 & 73.8 & 67.4 \\
+            9 & 71.5 & 38.7 & 35.9 & \textbf{75.6} & 39.0 & \textbf{36.7} & 90.8 & 76.2 & 70.1 & 90.9 & 73.6 & 67.1 \\
+            10 & 74.9 & 39.0 & 36.3 & 73.7 & 37.5 & 35.8 & 91.1 & 76.0 & 69.3 & 91.0 & 73.3 & 67.4 \\
+            11 & 74.3 & 36.9 & 37.4 & 72.2 & 37.3 & 34.8 & 91.2 & 74.8 & 68.8 & 91.3 & 73.8 & 67.8 \\
+            12 & 73.1 & \textbf{40.0} & 35.1 & 70.8 & 36.9 & 35.2 & 90.9 & 75.7 & 70.0 & 91.2 & 72.6 & 66.8 \\
+            13 & 73.9 & 37.2 & 34.9 & 73.6 & 37.3 & 34.6 & 91.4 & 76.5 & 69.9 & 91.5 & 74.9 & 67.9 \\
+            14 & 73.7 & 38.1 & 35.7 & 71.6 & 36.1 & 33.9 & 91.6 & 76.8 & \textbf{71.4} & 91.0 & 73.1 & 66.6 \\
+            15 & 73.4 & 37.9 & 34.9 & 72.6 & 37.1 & 36.2 & \textbf{91.8} & 75.9 & 68.6 & 91.4 & 74.0 & 68.5 \\
+        \bottomrule
+    \end{tabular}
+    }
+    \label{tab:fine_tuning_all}
+\end{table}
+%------------ TABLE FINE TUNING MODEL -------------
+
+
+%%%%%%%%%%%%%%%REV1%%%%%%%%%%%%%%%
+\blue{4. Additionally, the deep learning methodology, while described in detail, does not provide sufficient insight into the interpretability of the model's predictions. Medical applications require explainability to ensure trust and adoption. The manuscript should include a discussion of feature importance or visualization techniques, such as saliency maps, to help clinicians understand why the model makes certain predictions.}
+
+We thank the Reviewer for highlighting the importance of model interpretability in clinical applications. In the revised manuscript, we have added a discussion on the interpretability of the model's predictions in Section~IV.
+
+Specifically, we conducted a systematic ablation study across three sensor configurations --- distal phalanges only (5~sensors), distal and intermediate phalanges (10~sensors), and all phalanges (15~sensors) --- to provide insight into which sensor regions contribute most to the model's decision-making. The results demonstrate that using distal and intermediate phalanges (10~sensors) yields comparable or even slightly superior performance to using all 15~sensors for lump detection (74.4\% vs.~73.2\% F1-score under group k-fold CV), while using distal phalanges alone (5~sensors) resulted in a notable drop to 67.8\%. This finding suggests that the model primarily relies on the fingertip and middle-phalange regions, which aligns with clinical palpation practice where fingertips are the primary sensing surface.
+
+Furthermore, the duration analysis across 1--7~second palpation windows provides additional interpretability: performance remained relatively stable across durations (72.2\%--75.4\% under group k-fold CV), indicating that the discriminative features are distributed throughout the palpation cycle rather than concentrated in a specific temporal segment. This is consistent with the circular palpation protocol, where tactile information is accumulated continuously.
+
+We acknowledge that more advanced explainability techniques such as gradient-weighted saliency maps (e.g., Grad-CAM adapted for 1D temporal signals) could further enhance interpretability and plan to address this in future work.
+
+
+
+
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\section*{Reviewer 2}
+
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\blue{3. The paper's contributions are overstated.i) The recurrent DL architectures are long established and used "as they come". There is zero work carried out on the ML algorithms to adapt them to this lump detection task.}
+
+We thank the Reviewer for the important remark regarding the paper's contribution. We acknowledge that the deep learning architectures themselves are established; however, the contribution of this work is not in proposing novel DL architectures but rather in their systematic application and evaluation in the context of tactile-based breast lump detection, which, to the best of our knowledge, has not been previously investigated.
+
+Specifically, our contributions are:
+\begin{enumerate}
+    \item A comprehensive benchmarking of eight time-series classification architectures (InceptionTime, XceptionTime, XResNet1d34, mWDN, ResCNN, FCN, LSTM-FCN, LSTM) on tactile glove sensor data for breast lump detection, evaluated under rigorous cross-validation protocols (see Table~\ref{tab:benchmarking}).
+    \item A multitask learning framework that simultaneously predicts lump presence, size, and location from a shared backbone, demonstrating that joint optimization does not degrade lump detection performance while enabling additional diagnostic capabilities (see Table~\ref{tab:initial}).
+    \item A systematic analysis of sensor configurations (distal, distal+intermediate, all phalanges) and palpation durations (1--7~seconds), providing design guidelines for future glove-based tactile sensing systems.
+    \item A fine-tuning protocol that demonstrates how minimal clinician data (as few as 1--4 trials) can bridge the domain gap between non-expert and expert users (see Table~\ref{tab:fine_tuning_all}).
+\end{enumerate}
+
+In the revised manuscript, we have clarified the contributions as follows:
+"\textit{application of established deep learning models, benchmarked and systematically evaluated, to predict the lump presence, its size, and location from the time-series data obtained during circular palpation, along with a fine-tuning protocol for cross-user generalization.}''
+
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\blue{4. ii) Transfer learning is an established method and does not represent a contribution. More importantly it is used inaccurately. The authors correctly point that transfer learning is the "Incremental transfer learning is a machine learning technique where a pre-trained model on one task is adapted to perform a related task". However, the consideration " Since the exploratory movements are unique for every person, we consider the transfer of learning between experienced and non-experienced users" is wrong given that the task is exactly the same. What the authors do is just train the same model with more data, there is no actual transfer learning process taking place. No new task and no new type of data. This is a major paper flaw.}
+
+We thank the Reviewer for the valuable remark regarding the use of the transfer learning concept. We fully agree with the Reviewer that the term ``transfer learning'' was inaccurately used in the original manuscript. Indeed, the task and data modality remain the same; what changes is the source of the data (non-expert vs.~clinician users). This is correctly characterized as \textit{fine-tuning with additional in-domain data} rather than transfer learning.
+
+In the revised manuscript, we have replaced all references to ``transfer learning'' with ``fine-tuning'' to accurately reflect the methodology. The fine-tuning process involves augmenting the training set with a small number of clinician trials (1--15) and retraining the model, thereby adapting it to the palpation patterns of expert users without changing the architecture or the task. As shown in Table~\ref{tab:fine_tuning_all}, incorporating as few as four clinician trials improved the lump detection F1-score under stratified group k-fold CV from 73.2\% to 76.1\%, confirming that even minimal additional data from the target user group is sufficient to bridge the performance gap.
+
+This remark is also tightly related to Reviewer~1, Comment~1, and we kindly refer the Reviewer to its reply for further details.
+
+
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\blue{7. The DL development and experimental validation sections are dubious. 
+i) The only valid experimental split is the UL one where data are split on the basis of users. The WL is an attempt from the authors to improve the performance. This is effectively stated.  "Given that the user-level study may present a lower performance due to the ..." This justification is not a scientific it just says that not enough data were collected so we do a different split that will present better results. Given the dataset the UL split should have been attempted in cross-validation setup (where all user act as a testing dataset and performance is obtained as mean values) not a random 7 training, 2 validation, 1 testing. Without a cross validation experiment}
+We thank the Reviewer for the valuable feedback regarding the data split approach. We fully agree that the user-level (between-user) split is the scientifically valid evaluation protocol, and we have made substantial changes accordingly.
+
+In the revised manuscript, we replaced the previous train/validation/test random split with a rigorous 5-fold cross-validation setup using two complementary strategies:
+\begin{itemize}
+    \item \textbf{Stratified Group K-Fold CV ($K=5$):} All samples from a given participant are assigned exclusively to either training or validation, ensuring that performance reflects true generalization to unseen users. This is directly equivalent to the user-level (UL) leave-users-out protocol requested by the Reviewer, but implemented systematically across all participants via cross-validation rather than a single random split.
+    \item \textbf{Stratified K-Fold CV ($K=5$):} Samples are distributed across folds while preserving class proportions, but allowing the same participant to appear in different folds. This provides an upper-bound estimate and quantifies the contribution of participant-specific vs.\ task-specific features.
+\end{itemize}
+
+As expected, stratified group k-fold CV yields lower performance than stratified k-fold CV (e.g., 73.2\% vs.\ 90.5\% F1-score for lump detection), reflecting the challenge of generalizing across users. However, when both models were evaluated on a completely independent clinician dataset (unseen during training), the performance gap narrowed considerably (67.4\% vs.\ 66.0\%), suggesting that both approaches captured meaningful task-related features rather than merely participant-specific patterns.
+
+Furthermore, the fine-tuning results in Table~\ref{tab:fine_tuning_all} demonstrate that incorporating as few as 1--4 clinician trials during training is sufficient to recover and even surpass the base model performance, confirming that the system can be efficiently adapted to new users with minimal calibration data.
+
+We kindly ask the Reviewer to also refer to Reviewer~1, Comment~1, for further details on the changes made. 
+
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\blue{8. i) For the tasks of classification mentioned, the f1 score, the harmonic mean of precision and recall, should be used instead of just accuracy.}
+
+We thank the Reviewer for the valuable feedback regarding the model performance evaluation metrics. In the revised manuscript, we have reported the F1-score. Likewise, we report the F1-score and recall for the human perception experiments.
+
+Changes made in Section II-C of the revised manuscript: \\
+``\textit{To evaluate model performance, we adopted the F1-score as the primary evaluation metric.} 
+\begin{equation}
+    F1-score=\frac{2\times(Recall{\times}Precision)}{Recall{+}Precision}
+    \label{eq:f1}
+\end{equation}
+\textit{Recall is defined as }
+\begin{equation}
+    Recall = \frac{T_{Pos}}{T_{Pos} + F_{Neg}},
+    \label{eq:recall}
+\end{equation}
+\textit{where $T_{Pos}$ and $F_{Neg}$  are true positive and false negative scores.
+Precision is defined as }
+\begin{equation}
+    Precision = \frac{T_{Pos}}{T_{Pos} + F_{Pos}},
+    \label{eq:precision}
+\end{equation}
+\textit{where $T_{Pos}$ and $F_{Pos}$  are true positive and false positive scores.
+This choice was motivated by the class imbalance present in the dataset, where accuracy alone could provide a misleading assessment of model performance by favoring the majority class. The F1-score, defined as the harmonic mean of precision and recall, offers a balanced evaluation by simultaneously accounting for false positives and false negatives. This is particularly important for binary classification tasks in which misclassification of the minority class carries a significant impact. In addition, the F1-score provides robustness against skewed class distributions and enables a more reliable comparison between models during benchmarking.}"
+
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\blue{9. ii) "Next, we test various sensor configurations and chunks of time duration to find the optimal combination to determine the best setup for accurate and consistent data acquisition in comparable glove-based systems". The decision on a 7s palpation is empirical and seems to me that it just fits the dataset collected.}
+
+We thank the Reviewer for this remark. In the revised manuscript, we have conducted a systematic evaluation of palpation durations ranging from 1 to 7~seconds to empirically validate the choice of temporal window.
+
+The results demonstrate that for lump detection under stratified group k-fold CV (all sensors), the F1-score remains relatively stable across durations: 72.2\% (1s), 75.0\% (2s), 74.7\% (3s), 74.3\% (4s), 75.4\% (5s), 74.5\% (6s), and 73.2\% (7s). Under stratified k-fold CV, a similar trend holds: 88.3\% (1s) gradually increasing to 90.5\% (7s). For the more challenging tasks --- size and position classification --- 7~seconds consistently provides the highest or near-highest F1-scores (41.5\% and 37.3\%, respectively, under group k-fold CV), with shorter durations showing a gradual decline.
+
+The 7-second window was selected for two reasons: (1)~it provides the best or near-best performance across all tasks and sensor configurations, particularly for the finer-grained size and location tasks that require more temporal information; and (2)~it corresponds to the natural palpation duration observed during data collection, where participants were instructed to perform a complete circular palpation motion. The protocol was designed based on clinical palpation guidelines, where a circular motion of the breast region is recommended.
+
+Importantly, the duration analysis is not merely a post-hoc justification but rather a design guideline for future glove-based systems: even 2--3~seconds of palpation data provides reasonable lump detection performance (74--75\% F1-score), which is relevant for time-constrained clinical scenarios.
+
+
+
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\blue{10. iii) There are major information on DL development missing. For example, what is the loss used to optimise the models. Was it simple cross entropy ?}
+
+We thank the Reviewer for pointing out this omission. In the revised manuscript, we have added a detailed description of the loss functions used for model optimization in Section~III-C.
+
+For the binary lump detection task (lump presence: yes/no), we employed the \textit{Binary Cross-Entropy with Logits Loss} (BCEWithLogitsLoss), which combines a sigmoid activation with binary cross-entropy in a numerically stable formulation:
+\begin{equation}
+    \mathcal{L}_{\text{BCE}} = -\frac{1}{N}\sum_{i=1}^{N}\left[y_i \log(\sigma(\hat{y}_i)) + (1-y_i)\log(1-\sigma(\hat{y}_i))\right]
+\end{equation}
+where $\sigma(\cdot)$ denotes the sigmoid function, $y_i \in \{0,1\}$ is the ground truth, and $\hat{y}_i$ is the raw network output (logit).
+
+For the multiclass tasks (size classification with 4~classes, and location classification with 4~classes), we employed the standard \textit{Cross-Entropy Loss}:
+\begin{equation}
+    \mathcal{L}_{\text{CE}} = -\frac{1}{N}\sum_{i=1}^{N}\sum_{c=1}^{C} y_{i,c} \log\left(\frac{e^{\hat{y}_{i,c}}}{\sum_{j=1}^{C}e^{\hat{y}_{i,j}}}\right)
+\end{equation}
+where $C$ is the number of classes and $y_{i,c}$ is the one-hot encoded ground truth.
+
+All models were optimized using the Adam optimizer with a learning rate of $10^{-3}$ and weight decay of $10^{-4}$. Training was performed with mixed-precision (AMP) when GPU was available, and early stopping with a patience of 15~epochs based on the validation F1-score was applied to prevent overfitting.
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\blue{11. iv) For the multi-tasking model, where the models simultaneously optimised to perform all three tasks? What were the losses used?}
+In the revised manuscript, we have clarified the multitask learning formulation in Section~III-C.
+
+In single-task learning, each classification objective (lump presence, size, or location) was optimized independently with its own dedicated model.
+
+In the multitask setting, the three tasks were simultaneously optimized using a shared InceptionTime backbone with three separate output heads: (1)~a binary head for lump presence using BCEWithLogitsLoss, (2)~a 4-class head for size using Cross-Entropy Loss, and (3)~a 4-class head for location using Cross-Entropy Loss. The total loss was computed as the unweighted sum of the three individual losses:
+\begin{equation}
+    \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{BCE}}^{\text{Lump}} + \mathcal{L}_{\text{CE}}^{\text{Size}} + \mathcal{L}_{\text{CE}}^{\text{Location}}
+\end{equation}
+
+This equal weighting was chosen as it yielded stable training across all three heads. As shown in Table~\ref{tab:initial}, the multitask model achieved comparable lump detection performance to the single-task model (73.6\% vs.\ 73.2\% under group k-fold CV) while simultaneously predicting size and location, demonstrating that the shared representation did not degrade the primary detection task. Performance was reported both at the individual head level and as an aggregated (mean) F1-score across all tasks.
+
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\blue{12. v) The transfer learning concept is misused. The authors just increase the training dataset there is no transfer learning performed. Also in the experiments presented as transfer learning data from the oncologist-mamologist are added to the training set and also used for testing. This is not adaptation to unseen users as the authors claim}
+
+We fully agree with the Reviewer's remark. As detailed in our response to Reviewer~2, Comment~4, we have replaced all references to ``transfer learning'' with ``fine-tuning'' throughout the revised manuscript. The process involves augmenting the training set with clinician trials and retraining the same model on the same task; no domain or task adaptation is performed. The clinician data used for fine-tuning was strictly separated from the clinician data used for external evaluation to prevent any data leakage. This remark is also tightly related to Reviewer~1, Comment~1, and we kindly refer the Reviewer to its reply for further details. 
+
+%%%%%%%%%%%%%%%REV2%%%%%%%%%%%%%%%
+\blue{13. vi) What is the difference between Table 1 results and Table 2 single-task base model training ? Isn't it both InceptionTime on the same binary classification task ? Why are results so different ?)}
+We thank the Reviewer for the remark. In the revised manuscript, we have restructured the tables to clearly separate the benchmarking results from the task-specific evaluation.
+
+Table~\ref{tab:benchmarking} (new Table~I) presents the benchmarking of eight different DL architectures on the \textit{binary lump detection task only}, reporting F1-scores under both cross-validation schemes. This table is used solely for model selection; InceptionTime was selected as the best-performing architecture (74.6\% group k-fold, 92.5\% plain k-fold).
+
+Table~\ref{tab:initial} (new Table~II) presents the InceptionTime results across \textit{all three tasks} (lump presence, size, and location) in both single-task and multitask configurations, evaluated on both the validation set and the independent clinician dataset. The difference in lump detection numbers between the two tables (74.6\% in Table~\ref{tab:benchmarking} vs.\ 73.2\% in Table~\ref{tab:initial}) is due to the fact that Table~\ref{tab:benchmarking} reports the best run from the benchmark sweep, while Table~\ref{tab:initial} reports results from the full experiment pipeline with identical hyperparameters across all tasks and configurations. Both values were obtained from separate experimental runs using the same cross-validation protocol. 
+
+\blue{14. vii) Some accuracy number reported in the text do not appear in Table 2.
+- Page 8 "However, the same models trained on the data with within-user split showed superior performance with an overall accuracy of 81.52\% and 85.27\%,correspondingly" but table 2 does not lists 82.22\% as base model performance for the WU split.)}
+
+We thank the Reviewer for the remark. We carefully revised the manuscript and updated the results based on the new adjustments we have made to the revised manuscript. 
+
+
+
+
+\end{document}
+
