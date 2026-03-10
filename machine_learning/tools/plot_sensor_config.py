@@ -219,7 +219,7 @@ def plot_config(
         out_path = output_dir / filename
         # Expand bottom margin only for the saved file so the x-axis
         # "Time [s]" title is not clipped by kaleido (show() already fired)
-        fig.write_image(str(out_path), height=300, width=1000)
+        fig.write_image(str(out_path), height=300, width=1000, scale=20)
         print(f"Saved: {out_path}")
 
     return fig
@@ -241,21 +241,21 @@ if __name__ == "__main__":
     # ---- generate the four paper plots -----------------------------------
     plot_config(
         df_group_MTL,
-        "sensor_config_val_group_MTL.pdf",
+        "syrym8_2.pdf",
         "Stratified Group <br>K-fold CV: MTL",
     )
     plot_config(
         df_plain_MTL,
-        "sensor_config_val_plain_MTL.pdf",
+        "syrym8_4.pdf",
         "Stratified <br>K-fold CV: MTL",
     )
     plot_config(
         df_group_STL,
-        "sensor_config_val_group_STL.pdf",
+        "syrym8_1.pdf",
         "Stratified Group <br>K-fold CV: STL",
     )
     plot_config(
         df_plain_STL,
-        "sensor_config_val_plain_STL.pdf",
+        "syrym8_3.pdf",
         "Stratified <br>K-fold CV: STL",
     )
