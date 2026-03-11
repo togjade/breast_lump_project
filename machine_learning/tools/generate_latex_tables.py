@@ -1,9 +1,9 @@
 """
 Generate LaTeX tables from all_results.csv for research paper.
-Creates 3 tables:
-- Distal Phalanges (distal)
-- Distal and Intermediate Phalanges (distal_intermediate)
-- All (all)
+Creates tables:
+- Initial overview table (val + doctors_test, sensor_config=all, num_seconds=7)
+- 3 fine-tuning tables by sensor config (doctor_trials 0-15, num_seconds=7)
+- 6 duration tables by sensor config × CV type (Touch Duration 1-7 s, Added Trials 0-15)
 
 Each table shows F1-scores (%) for:
 - Single-task: Lump Presence, Size, Location
@@ -277,6 +277,150 @@ def generate_table(df: pd.DataFrame, sensor_config: str, sensor_name: str) -> st
     return table
 
 
+def get_mean_f1_general(df: pd.DataFrame, task: str, cv_type: str,
+                        sensor_config: str, num_seconds: int,
+                        doctor_trials: int) -> float:
+    """Get mean F1 score across folds for a given duration and doctor_trials (eval_set=val)."""
+    mask = (
+        (df["task"] == task) &
+        (df["cv_type"] == cv_type) &
+        (df["sensor_config"] == sensor_config) &
+        (df["num_seconds"] == num_seconds) &
+        (df["doctor_trials"] == doctor_trials) &
+        (df["eval_set"] == "val")
+    )
+    subset = df[mask]
+    if subset.empty:
+        return np.nan
+    return subset["f1"].mean() * 100
+
+
+def get_multitask_f1_general(df: pd.DataFrame, head: str, cv_type: str,
+                             sensor_config: str, num_seconds: int,
+                             doctor_trials: int) -> float:
+    """Get mean F1 score for a multitask head at a given duration and doctor_trials."""
+    mask = (
+        (df["task"] == "multitask_all") &
+        (df["cv_type"] == cv_type) &
+        (df["sensor_config"] == sensor_config) &
+        (df["num_seconds"] == num_seconds) &
+        (df["doctor_trials"] == doctor_trials) &
+        (df["eval_set"] == "val")
+    )
+    subset = df[mask]
+    if subset.empty:
+        return np.nan
+    col_map = {"Lump": "Lump_f1", "Size": "Size_f1", "Position": "Position_f1"}
+    col = col_map.get(head)
+    if col and col in subset.columns:
+        return subset[col].mean() * 100
+    return np.nan
+
+
+def _collect_row(df, cv_type, sensor_config, num_seconds, doctor_trials):
+    """Collect 6 F1 values: STL (Lump, Size, Loc) + MTL (Lump, Size, Loc)."""
+    row = []
+    row.append(get_mean_f1_general(df, "lump_binary", cv_type, sensor_config, num_seconds, doctor_trials))
+    row.append(get_mean_f1_general(df, "size_multiclass", cv_type, sensor_config, num_seconds, doctor_trials))
+    row.append(get_mean_f1_general(df, "position_multiclass", cv_type, sensor_config, num_seconds, doctor_trials))
+    row.append(get_multitask_f1_general(df, "Lump", cv_type, sensor_config, num_seconds, doctor_trials))
+    row.append(get_multitask_f1_general(df, "Size", cv_type, sensor_config, num_seconds, doctor_trials))
+    row.append(get_multitask_f1_general(df, "Position", cv_type, sensor_config, num_seconds, doctor_trials))
+    return row
+
+
+def _build_combined_rows(all_values, best_indices, durations_left, durations_right, trials):
+    """Build rows that combine left and right halves in one tabular row each.
+    Left half uses column indices 0–5; right half uses 6–11 (offset by n_left rows)."""
+    n_left = len(durations_left) * len(trials)
+    rows = []
+    left_idx = 0
+    right_idx = 0
+    for li, ns_l in enumerate(durations_left):
+        ns_r = durations_right[li]
+        for ti, dt in enumerate(trials):
+            # Left cells (flat indices 0..n_left-1)
+            lcells = []
+            for ci in range(6):
+                val = all_values[ci][left_idx]
+                is_best = left_idx in best_indices[ci]
+                lcells.append(format_value(val, is_best))
+            l_dur = f"\\multirow{{{len(trials)}}}{{*}}{{{ns_l}}}" if ti == 0 else ""
+
+            # Right cells (flat indices n_left..end)
+            rcells = []
+            for ci in range(6):
+                val = all_values[ci][n_left + right_idx]
+                is_best = (n_left + right_idx) in best_indices[ci]
+                rcells.append(format_value(val, is_best))
+            r_dur = f"\\multirow{{{len(trials)}}}{{*}}{{{ns_r}}}" if ti == 0 else ""
+
+            left_part  = f"{l_dur} & {dt} & " + " & ".join(lcells)
+            right_part = f"{r_dur} & {dt} & " + " & ".join(rcells)
+            rows.append(f"            {left_part} & {right_part} \\\\")
+            left_idx  += 1
+            right_idx += 1
+        if li < len(durations_left) - 1:
+            rows.append("            \\midrule")
+    return rows
+
+
+def generate_duration_table(df: pd.DataFrame, sensor_config: str,
+                            sensor_name: str, cv_type: str,
+                            cv_label: str) -> str:
+    """Single tabular with left (1–3 s) and right (4–6 s) halves concatenated side by side."""
+    durations_left  = list(range(1, 4))   # 1, 2, 3
+    durations_right = list(range(4, 7))   # 4, 5, 6
+    durations_all   = durations_left + durations_right
+    trials = list(range(16))
+
+    # Collect all values for global bolding (left indices first, then right)
+    all_values = {ci: [] for ci in range(6)}
+    for ns in durations_all:
+        for dt in trials:
+            row = _collect_row(df, cv_type, sensor_config, ns, dt)
+            for ci, v in enumerate(row):
+                all_values[ci].append(v)
+
+    best_indices = {ci: find_best_indices(vs) for ci, vs in all_values.items()}
+
+    rows = _build_combined_rows(all_values, best_indices, durations_left, durations_right, trials)
+
+    # Column spec: dur | trials | STL(3) | MTL(3)  ||  dur | trials | STL(3) | MTL(3)
+    col_spec = "c c | c c c | c c c || c c | c c c | c c c"
+
+    table = (
+        f"\\begin{{table*}}[p]\n"
+        f"\\centering\n"
+        f"\\caption{{F1-scores~(\\%) for {sensor_name} --- {cv_label}. "
+        f"Averaged across five folds (validation set). "
+        f"Touch durations 1--3\\,s (left) and 4--6\\,s (right).}}\n"
+        f"\\resizebox{{\\textwidth}}{{!}}{{%\n"
+        f"\\begin{{tabular}}{{{col_spec}}}\n"
+        f"    \\toprule\n"
+        f"    & & \\multicolumn{{3}}{{c}}{{Single-task}} & \\multicolumn{{3}}{{c}}{{Multitask}}\n"
+        f"    & & & \\multicolumn{{3}}{{c}}{{Single-task}} & \\multicolumn{{3}}{{c}}{{Multitask}} \\\\\n"
+        f"    \\cmidrule(lr){{3-5}} \\cmidrule(lr){{6-8}} \\cmidrule(lr){{11-13}} \\cmidrule(lr){{14-16}}\n"
+        f"    \\shortstack{{Touch\\\\Duration\\\\{{[s]}}}}\n"
+        f"    & \\shortstack{{Added\\\\Trials}}\n"
+        f"    & \\shortstack{{Lump\\\\Presence}} & Size & Location\n"
+        f"    & \\shortstack{{Lump\\\\Presence}} & Size & Location\n"
+        f"    & \\shortstack{{Touch\\\\Duration\\\\{{[s]}}}}\n"
+        f"    & \\shortstack{{Added\\\\Trials}}\n"
+        f"    & \\shortstack{{Lump\\\\Presence}} & Size & Location\n"
+        f"    & \\shortstack{{Lump\\\\Presence}} & Size & Location \\\\\n"
+        f"    \\midrule\n"
+        + "\n".join(rows) + "\n"
+        f"    \\bottomrule\n"
+        f"\\end{{tabular}}%\n"
+        f"}}\n"
+        f"\\label{{tab:duration_{sensor_config}_{cv_type}}}\n"
+        f"\\end{{table*}}"
+    )
+
+    return table
+
+
 def main():
     # Try both possible paths
     csv_path = Path("results/inceptiontime/all_results.csv")
@@ -288,7 +432,10 @@ def main():
         return
 
     print(f"Loading {csv_path}...")
-    df_all = load_data(csv_path)
+    # Load full data (all num_seconds) for duration tables
+    df_full = pd.read_csv(csv_path)
+    # Filtered to num_seconds=7 for existing tables
+    df_all = df_full[df_full["num_seconds"] == 7].copy()
     df_val = df_all[df_all["eval_set"] == "val"]
     print(f"Total rows (7s): {len(df_all)}, val-only: {len(df_val)}")
 
@@ -301,7 +448,6 @@ def main():
     print("  Done.")
 
     # --- Fine-tuning tables per sensor config ---
-
     sensor_configs = [
         ("distal", "Distal Phalanges"),
         ("distal_intermediate", "Distal and Intermediate Phalanges"),
@@ -310,16 +456,29 @@ def main():
 
     all_tables = [initial_table]
     for sensor_config, sensor_name in sensor_configs:
-        print(f"Generating table for {sensor_name} ({sensor_config})...")
+        print(f"Generating fine-tuning table for {sensor_name}...")
         table = generate_table(df_val, sensor_config, sensor_name)
         all_tables.append(table)
-        print(f"  Done.")
+        print("  Done.")
+
+    # --- Duration tables per sensor config × CV type (sideways) ---
+    cv_types = [
+        ("group", "Stratified Group K-Fold CV"),
+        ("plain", "Stratified K-Fold CV"),
+    ]
+    for sensor_config, sensor_name in sensor_configs:
+        for cv_type, cv_label in cv_types:
+            print(f"Generating duration table for {sensor_name} / {cv_label}...")
+            table = generate_duration_table(df_full, sensor_config, sensor_name,
+                                            cv_type, cv_label)
+            all_tables.append(table)
+            print("  Done.")
 
     # Save all tables to a single file
     output_path = output_dir / "latex_tables.tex"
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("% LaTeX tables generated from all_results.csv\n")
-        f.write("% Requires: booktabs, multirow packages\n\n")
+        f.write("% Requires: booktabs, multirow, rotating, makecell packages\n\n")
         f.write("\n\n".join(all_tables))
 
     print(f"\nSaved all tables to: {output_path}")
