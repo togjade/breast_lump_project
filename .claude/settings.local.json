@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "Bash(where python:*)",
+      "Bash(ls c:/Users/gream/Workspace/breast_lump_project/machine_learning/.venv/Scripts/python*)",
+      "Bash(c:/Users/gream/Workspace/breast_lump_project/machine_learning/.venv/Scripts/python.exe -c ':*)",
+      "Bash(c:/Users/gream/Workspace/breast_lump_project/machine_learning/.venv/Scripts/python.exe --version)",
+      "Bash(c:/Users/gream/Workspace/breast_lump_project/machine_learning/.venv/Scripts/python.exe -c \"print\\('hello'\\)\")",
+      "Bash(python3 -c \"print\\('hello'\\)\")",
+      "Bash(/c/Users/gream/AppData/Local/Microsoft/WindowsApps/python3 -c \"print\\('hello'\\)\")",
+      "Bash(uv run:*)",
+      "Bash(uv python:*)",
+      "Bash('/c/Program Files/Python311/python.exe' -c ':*)",
+      "Bash(\"/c/Program Files/Python311/python.exe\" -m pip install python-pptx)"
+    ]
+  }
+}
