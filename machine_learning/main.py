@@ -127,6 +127,12 @@ def save_confusion_matrix(labels: List[str], out_path: Path, y_true: Optional[np
     plt.close(fig)
 
 
+def save_model_artifact(model: nn.Module, out_path: Path, metadata: Dict) -> None:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    state_dict = {k: v.detach().cpu() for k, v in model.state_dict().items()}
+    torch.save({"state_dict": state_dict, "metadata": metadata}, out_path)
+
+
 # Unified columns to keep CSV schema consistent across tasks
 ALL_RESULT_COLUMNS = [
     "model",
@@ -785,6 +791,11 @@ def run_cv(
         metrics, cms = evaluate(
             model, val_loader, task.task_type, task.label_names)
 
+        model_path = results_dir / (
+            f"final_model_{task.name}_{cv_type}_{sensor_config}_{num_seconds}s_"
+            f"{model_name}_fold{fold}.pt"
+        )
+
         fold_result = {
             "model": model_name,
             "task": task.name,
@@ -828,6 +839,27 @@ def run_cv(
             fold_result["combined_precision"] = fold_result["precision"]
             fold_result["combined_recall"] = fold_result["recall"]
             fold_result["combined_accuracy"] = fold_result["accuracy"]
+        save_model_artifact(
+            model,
+            model_path,
+            {
+                "model_name": model_name,
+                "task": task.name,
+                "task_type": task.task_type,
+                "cv_type": cv_type,
+                "sensor_config": sensor_config,
+                "sensor_indices": sensor_indices,
+                "num_seconds": num_seconds,
+                "fold": fold,
+                "n_splits": n_splits,
+                "doctor_trials": doctor_trials,
+                "in_channels": len(sensor_indices or list(range(15))),
+                "num_classes": task.num_classes,
+                "label_cols": task.label_cols,
+                "label_names": task.label_names,
+                "val_metrics": fold_result,
+            },
+        )
         fold_row = normalize_row(fold_result)
         results.append(fold_row)
         if results_path is not None:
@@ -1127,7 +1159,7 @@ if __name__ == "__main__":
     else:
         print("CUDA not available, using CPU.")
     main(
-        run_benchmark_flag=False,
+        run_benchmark_flag=True,
         finetune_doctors=True,
         validate_doctors=True,
         extra_durations=True,
